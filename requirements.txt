@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+websockets
+openai
+langchain
+langchain-openai
+python-dotenv
