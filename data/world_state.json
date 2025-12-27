@@ -1,6 +1,88 @@
 {
-    "current_location": "The Silver Gull",
+    "current_location": "WRCN Radio control room",
     "discovered_clues": [],
     "interviewed_suspects": [],
-    "progress": 0.0
+    "conversation_history": [
+        {
+            "role": "player",
+            "action": "\"Has she ever left the studio? Just for a moment, couple of minutes maybe?\""
+        },
+        {
+            "role": "ANNOUNCER",
+            "dialogue": "It's possible, but I can't say for sure. It was a hectic night, and there were moments when I was focused on the technical issues. You'd have to check the recordings to see if she slipped out for even a moment."
+        },
+        {
+            "role": "player",
+            "action": "\"Give us the recordings then. Also do you know anything about between the Miriam and Iris? Miriam seems like jelous of her.\" "
+        },
+        {
+            "role": "ANNOUNCER",
+            "dialogue": "\"Recordings? You\u2019ll have to speak to the studio engineer for that. As for Miriam and Iris, jealousy? In this business, it\u2019s a dangerous game. They were close, but as Iris started to rise, I could sense some tension. Seems like the spotlight can turn friends into rivals real quick.\""
+        },
+        {
+            "role": "player",
+            "action": "\"Thanks sir\" I'm headed towards the studio engineer. \"Hello sir, do you got the recordings of the night where Miriam performed at this radio?\""
+        },
+        {
+            "role": "ENGINEER",
+            "dialogue": "What do you want? I\u2019ve got a lot on my plate today."
+        },
+        {
+            "role": "player",
+            "action": "\"A murder happened at Silver Gull, we are checking Miriam's story, your announcer said you might have the records on that night. We want to check if Miriam ever left the studio or not.\""
+        },
+        {
+            "role": "ENGINEER",
+            "dialogue": "Fine, but you\u2019ll have to wait a moment. I\u2019ll get the recordings, but don\u2019t expect any favors."
+        },
+        {
+            "role": "player",
+            "action": "I wait"
+        },
+        {
+            "role": "STUDIO ENGINEER",
+            "dialogue": "C'mon, I can't find this tape all day. You think I have all night?"
+        },
+        {
+            "role": "player",
+            "action": "Are you saying those records are missing or you don't have the time for it? This is serious business pall, there is a murderer out there"
+        },
+        {
+            "role": "STUDIO ENGINEER",
+            "dialogue": "I don't have time for your games. The records are here somewhere, but I'm not your errand boy. You want them, you wait."
+        },
+        {
+            "role": "player",
+            "action": "I'm waiting until the engineer finds those recordings. "
+        },
+        {
+            "role": "STUDIO ENGINEER",
+            "dialogue": "Can\u2019t find anything in this mess! What a night it\u2019s been..."
+        },
+        {
+            "role": "player",
+            "action": "I light a cigaratte, sit somewhere in the room. Wait until he finds the records"
+        },
+        {
+            "role": "ENGINEER",
+            "dialogue": "This place is a mess... How am I supposed to find anything in this chaos?"
+        },
+        {
+            "role": "player",
+            "action": "Do you have the records or not? Find them immediately or else.. (intimidation) "
+        },
+        {
+            "role": "STUDIO ENGINEER",
+            "dialogue": "Can\u2019t you see I\u2019m trying to find it? This place is a disaster!"
+        },
+        {
+            "role": "player",
+            "action": "I wait. Until the engineer find the records. [Don't want to hear him still trying resolve the issue, he whether finds it or not]"
+        },
+        {
+            "role": "ENGINEER",
+            "dialogue": "Where is that damn reel? I swear it was here a minute ago!"
+        }
+    ],
+    "progress": 0
 }

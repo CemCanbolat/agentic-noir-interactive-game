@@ -8,22 +8,43 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
 from dotenv import load_dotenv
 
-
 # === 1. AGENT & HELPER IMPORTS ===
 base_dir = os.path.dirname(os.path.abspath(__file__))
 dotenv_path = os.path.join(base_dir, ".env")
 load_dotenv(dotenv_path)
 
-# Import your agent chains and parsers
 from agents.director import director_chain, director_parser
 from agents.narrator import narrator_chain, narrator_parser
 
 app = FastAPI()
 
 # === 2. DATA HELPER FUNCTIONS ===
-from utils import load_json_data, save_json_data
+def load_json_data(filepath: str) -> dict:
+    full_path = os.path.join(base_dir, filepath)
+    with open(full_path, 'r') as f:
+        return json.load(f)
 
-# === 3. MODIFIED CONNECTION MANAGER ===
+def save_json_data(filepath: str, data: dict):
+    full_path = os.path.join(base_dir, filepath)
+    with open(full_path, 'w') as f:
+        json.dump(data, f, indent=4)
+
+def reset_world_state():
+    """Resets the world state to its template at server startup."""
+    template_path = os.path.join(base_dir, "data", "default_world_state.json")
+    world_state_path = os.path.join(base_dir, "data", "world_state.json")
+    try:
+        with open(template_path, "r") as f:
+            template_data = json.load(f)
+        with open(world_state_path, "w") as f:
+            json.dump(template_data, f, indent=4)
+        print("World state reset to template.")
+    except Exception as e:
+        print(f"Failed to reset world state: {e}")
+
+
+# === 3. CONNECTION MANAGER ===
+# (This class is unchanged)
 class ConnectionManager:
     def __init__(self):
         self.players: Dict[str, Dict] = {}
@@ -47,7 +68,7 @@ class ConnectionManager:
             print(f"Player {player_id} set nickname: {nickname}")
 
     async def broadcast(self, sender_id: str, message: str):
-        sender_name = self.players[sender_id]["nickname"] or f"Detective-{sender_id[-3:]}"
+        sender_name = self.players[sender_id].get("nickname") or f"Detective-{sender_id[-3:]}"
         for pid, info in self.players.items():
             tag = "You" if pid == sender_id else sender_name
             await info["ws"].send_text(json.dumps({"type": "chat", "sender": tag, "text": message}))
@@ -57,13 +78,12 @@ class ConnectionManager:
             await info["ws"].send_text(json.dumps({"type": "system", "text": message}))
 
     async def broadcast_scene(self, scene: List[Dict]):
-        """Broadcasts the structured scene data to all connected players."""
         for info in self.players.values():
             await info["ws"].send_text(json.dumps({"type": "scene", "data": scene}))
 
 manager = ConnectionManager()
 
-# === 4. AGENT GAME LOOP ===
+# === 4. AGENT GAME LOOP (WITH MEMORY) ===
 def run_game_turn_sync(player_action: str) -> (dict, dict):
     """
     Runs the full Director > Narrator agent pipeline.
@@ -72,6 +92,12 @@ def run_game_turn_sync(player_action: str) -> (dict, dict):
     # 1. Load state
     world_state = load_json_data('data/world_state.json')
     solution = load_json_data('data/solution.json')
+    
+    # --- NEW: LOAD CONVERSATION HISTORY ---
+    # Get the history, or an empty list if it's not there
+    conversation_history = world_state.get('conversation_history', [])
+    # Get just the last 5 turns (10 lines: 5 player, 5 agent)
+    recent_history = conversation_history[-10:]
 
     # 2. Run Director
     print("Director is thinking...")
@@ -79,8 +105,16 @@ def run_game_turn_sync(player_action: str) -> (dict, dict):
         "solution": json.dumps(solution),
         "world_state": json.dumps(world_state),
         "action": player_action,
-        "format_instructions": director_parser.get_format_instructions()
+        "format_instructions": director_parser.get_format_instructions(),
+        # --- NEW: PASS THE HISTORY ---
+        "conversation_history": json.dumps(recent_history) # Pass the recent history as a string
     })
+
+    # (Debug print block - keep this!)
+    print("\n--- DIRECTOR'S OUTPUT (DEBUG) ---")
+    print(f"Narrator Prompt: {director_decision['narrator_prompt']}")
+    print(f"Interactables:   {director_decision['interactable_list']}")
+    print("----------------------------------\n")
 
     # 3. Run Narrator
     print("Narrator is writing...")
@@ -90,17 +124,35 @@ def run_game_turn_sync(player_action: str) -> (dict, dict):
     })
 
     # 4. Update and save state
+    print("Updating world state...")
+    
+    # Update simple state
     world_state['current_location'] = director_decision['new_location']
     world_state['progress'] = director_decision['progress_update']
-    world_state['discovered_clues'] = list(set(world_state['discovered_clues'] + director_decision['clues_discovered']))
-    world_state['interviewed_suspects'] = list(set(world_state.get('interviewed_suspects', []) + director_decision.get('interviewed_suspects', [])))
     
+    # Update lists safely
+    old_clues = world_state.get('discovered_clues', [])
+    old_suspects = world_state.get('interviewed_suspects', [])
+    world_state['discovered_clues'] = list(set(old_clues + director_decision['clues_discovered']))
+    world_state['interviewed_suspects'] = list(set(old_suspects + director_decision.get('interviewed_suspects', [])))
+    
+    # --- NEW: SAVE CONVERSATION HISTORY (OPTIMIZED) ---
+    # Add the player's action
+    conversation_history.append({"role": "player", "action": player_action})
+    # Add ONLY the NPC dialogue lines from the Narrator's output
+    for line in narrator_output['scene']:
+        if line['speaker'] != 'NARRATOR':
+            conversation_history.append({"role": line['speaker'], "dialogue": line['text']})
+    
+    # Prune history to keep token costs low (e.g., last 20 lines)
+    world_state['conversation_history'] = conversation_history[-20:]
+
     save_json_data('data/world_state.json', world_state)
     print("World state updated.")
 
     return director_decision, narrator_output
 
-# === 5. MODIFIED WEBSOCKET ENDPOINT ===
+# === 5. WEBSOCKET ENDPOINT ===
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     player_id = await manager.connect(websocket)
@@ -113,22 +165,16 @@ async def websocket_endpoint(websocket: WebSocket):
                 await manager.set_nickname(player_id, payload["nickname"])
             
             elif payload["type"] == "chat":
-
                 player_action = payload["text"]
-                
-                # 1. Broadcast the player's action so everyone sees it
                 await manager.broadcast(player_id, player_action)
                 
-                # 2. Run the game loop in a separate thread to avoid blocking the server.
                 director_decision, narrator_output = await asyncio.to_thread(
                     run_game_turn_sync, player_action
                 )
 
-                # 3. Broadcast the Narrator's scene to everyone
                 await manager.broadcast_scene(narrator_output['scene'])
 
-                # 4. Broadcast the new interactables as a system message
-                if director_decision['interactable_list']:
+                if director_decision.get('interactable_list'):
                     interact_list_str = ", ".join(director_decision['interactable_list'])
                     await manager.broadcast_system(f"Interactable: {interact_list_str}")
 
@@ -136,10 +182,12 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(player_id)
     except Exception as e:
         print(f"An error occurred in websocket: {e}")
+        import traceback
+        traceback.print_exc()
         manager.disconnect(player_id)
 
 
-# === 6. MODIFIED HTML/JS CLIENT ===
+# === 6. HTML/JS CLIENT ===
 @app.get("/")
 async def get():
     html = """
@@ -159,6 +207,7 @@ async def get():
                 box-sizing: border-box;
                 border-radius: 4px;
                 font-family: inherit;
+                height: 400px;
             }
             #msg {
                 width: 70%;
@@ -177,11 +226,6 @@ async def get():
                 border-radius: 4px;
                 font-weight: bold;
             }
-            .chat-msg { color: #ffffff; }
-            .scene-narrator { color: #a9a9a9; font-style: italic; }
-            .scene-npc { color: #ffc107; font-weight: bold; }
-            .scene-style { color: #999; font-size: 0.9em; }
-            .system-msg { color: #00bcd4; font-style: italic; }
         </style>
     </head>
     <body>
@@ -196,16 +240,8 @@ async def get():
             let myID = null;
             let nickname = null;
             let log = document.getElementById('log');
-
-            function addLog(message, cssClass) {
-                log.value += message + "\\n";
-                // This is a bit of a hack for a textarea, but it's an MVP!
-                // A real app would use <div>s.
-                // For now, we'll just add simple text.
-            }
             
             function addSceneLog(speaker, style, text) {
-                let prefix = `[${speaker}]`;
                 if (speaker === "NARRATOR") {
                     log.value += `\\n[NARRATOR] (${style}): ${text}\\n\\n`;
                 } else {
@@ -234,7 +270,6 @@ async def get():
                         log.value += `[${data.sender}]: ${data.text}\\n`;
                         break;
                     
-                    // === NEW: HANDLE THE SCENE ===
                     case "scene":
                         data.data.forEach(line => {
                             addSceneLog(line.speaker, line.style, line.text);
