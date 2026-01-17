@@ -18,5 +18,10 @@
         "Crescent Hotel",
         "Greywater City streets"
     ],
-    "conversation_history": []
+    "conversation_history": [
+        {
+            "role": "player",
+            "action": "i take a look around"
+        }
+    ]
 }

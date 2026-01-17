@@ -156,6 +156,15 @@ class ConnectionManager:
             except:
                 pass
 
+    async def broadcast_processing(self, is_processing: bool):
+        """Notify all players about processing state."""
+        message = json.dumps({"type": "processing", "status": is_processing})
+        for info in self.players.values():
+            try:
+                await info["ws"].send_text(message)
+            except:
+                pass
+
 
 manager = ConnectionManager()
 
@@ -294,6 +303,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 
                 # Run game turn
                 try:
+                    await manager.broadcast_processing(True)
                     director_decision, narrator_output = await asyncio.to_thread(
                         run_game_turn_sync, player_action
                     )
@@ -309,6 +319,8 @@ async def websocket_endpoint(websocket: WebSocket):
                     import traceback
                     traceback.print_exc()
                     await manager.broadcast_system("[Error] Something went wrong. Try again.")
+                finally:
+                    await manager.broadcast_processing(False)
 
     except WebSocketDisconnect:
         await manager.disconnect(player_id)
