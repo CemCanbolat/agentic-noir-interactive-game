@@ -21,7 +21,7 @@
     "conversation_history": [
         {
             "role": "player",
-            "action": "i take a look around"
+            "action": "hi"
         }
     ]
 }
