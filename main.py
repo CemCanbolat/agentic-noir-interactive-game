@@ -1,3 +1,7 @@
+"""
+Agentic Noir - Interactive Film Noir Detective Game
+Main server with WebSocket multiplayer support and lobby system.
+"""
 import json
 import uuid
 import os
@@ -5,32 +9,56 @@ import asyncio
 from typing import List, Dict
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 
-# === 1. AGENT & HELPER IMPORTS ===
+# === 1. SETUP ===
 base_dir = os.path.dirname(os.path.abspath(__file__))
 dotenv_path = os.path.join(base_dir, ".env")
 load_dotenv(dotenv_path)
 
-from agents.director import director_chain, director_parser
-from agents.narrator import narrator_chain, narrator_parser
+# Import agents and memory manager
+from agents.director import invoke_director
+from agents.narrator import invoke_narrator
+from utils import memory_manager
 
-app = FastAPI()
+app = FastAPI(title="Agentic Noir")
 
-# === 2. DATA HELPER FUNCTIONS ===
+
+# === 2. GAME STATE ===
+class GameState:
+    """Global game state manager."""
+    def __init__(self):
+        self.in_lobby = True
+        self.current_case = "iris_bell"
+    
+    def start_game(self, case_id: str = "iris_bell"):
+        self.in_lobby = False
+        self.current_case = case_id
+        reset_game()
+    
+    def reset_to_lobby(self):
+        self.in_lobby = True
+
+game_state = GameState()
+
+
+# === 3. DATA HELPER FUNCTIONS ===
 def load_json_data(filepath: str) -> dict:
     full_path = os.path.join(base_dir, filepath)
     with open(full_path, 'r') as f:
         return json.load(f)
+
 
 def save_json_data(filepath: str, data: dict):
     full_path = os.path.join(base_dir, filepath)
     with open(full_path, 'w') as f:
         json.dump(data, f, indent=4)
 
-def reset_world_state():
-    """Resets the world state to its template at server startup."""
+
+def reset_game():
+    """Reset both world state and world memory for a new game."""
     template_path = os.path.join(base_dir, "data", "default_world_state.json")
     world_state_path = os.path.join(base_dir, "data", "world_state.json")
     try:
@@ -41,31 +69,54 @@ def reset_world_state():
         print("World state reset to template.")
     except Exception as e:
         print(f"Failed to reset world state: {e}")
+    
+    memory_manager.reset_memory()
+    print("World memory reset.")
 
 
-# === 3. CONNECTION MANAGER ===
-# (This class is unchanged)
+# === 4. CONNECTION MANAGER ===
 class ConnectionManager:
     def __init__(self):
         self.players: Dict[str, Dict] = {}
 
-    async def connect(self, websocket: WebSocket):
+    async def connect(self, websocket: WebSocket) -> str:
         await websocket.accept()
         player_id = str(uuid.uuid4())[:8]
-        self.players[player_id] = {"ws": websocket, "nickname": None}
+        self.players[player_id] = {"ws": websocket, "nickname": None, "ready": False}
         await websocket.send_text(json.dumps({"type": "assign_id", "player_id": player_id}))
         print(f"Player {player_id} connected.")
+        await self.broadcast_player_list()
         return player_id
 
-    def disconnect(self, player_id: str):
+    async def disconnect(self, player_id: str):
         self.players.pop(player_id, None)
         print(f"Player {player_id} disconnected.")
+        await self.broadcast_player_list()
 
     async def set_nickname(self, player_id: str, nickname: str):
         if player_id in self.players:
             self.players[player_id]["nickname"] = nickname
-            await self.broadcast_system(f"{nickname} joined the case.")
+            self.players[player_id]["ready"] = True
             print(f"Player {player_id} set nickname: {nickname}")
+            await self.broadcast_player_list()
+            await self.broadcast_system(f"{nickname} joined the case.")
+
+    def get_player_list(self) -> dict:
+        """Get sanitized player list for broadcasting."""
+        return {
+            pid: {"nickname": info["nickname"], "ready": info["ready"]}
+            for pid, info in self.players.items()
+        }
+
+    async def broadcast_player_list(self):
+        """Send updated player list to all connected clients."""
+        player_data = self.get_player_list()
+        message = json.dumps({"type": "player_list", "players": player_data})
+        for info in self.players.values():
+            try:
+                await info["ws"].send_text(message)
+            except:
+                pass
 
     async def broadcast(self, sender_id: str, message: str):
         sender_name = self.players[sender_id].get("nickname") or f"Detective-{sender_id[-3:]}"
@@ -75,84 +126,131 @@ class ConnectionManager:
 
     async def broadcast_system(self, message: str):
         for info in self.players.values():
-            await info["ws"].send_text(json.dumps({"type": "system", "text": message}))
+            try:
+                await info["ws"].send_text(json.dumps({"type": "system", "text": message}))
+            except:
+                pass
 
     async def broadcast_scene(self, scene: List[Dict]):
         for info in self.players.values():
-            await info["ws"].send_text(json.dumps({"type": "scene", "data": scene}))
+            try:
+                await info["ws"].send_text(json.dumps({"type": "scene", "data": scene}))
+            except:
+                pass
+
+    async def broadcast_game_start(self, case_id: str):
+        """Notify all players that the game has started."""
+        intro_messages = {
+            "iris_bell": "The rain hammers against your fedora as you push through the doors of The Silver Gull. A torch singer lies dead in her dressing room. Three suspects, one truth. Time to work."
+        }
+        intro = intro_messages.get(case_id, "The case begins...")
+        
+        message = json.dumps({
+            "type": "game_started",
+            "case": case_id,
+            "intro": intro
+        })
+        for info in self.players.values():
+            try:
+                await info["ws"].send_text(message)
+            except:
+                pass
+
+    async def broadcast_processing(self, is_processing: bool):
+        """Notify all players about processing state."""
+        message = json.dumps({"type": "processing", "status": is_processing})
+        for info in self.players.values():
+            try:
+                await info["ws"].send_text(message)
+            except:
+                pass
+
 
 manager = ConnectionManager()
 
-# === 4. AGENT GAME LOOP (WITH MEMORY) ===
-def run_game_turn_sync(player_action: str) -> (dict, dict):
+
+# === 5. GAME LOOP ===
+def run_game_turn_sync(player_action: str) -> tuple:
     """
     Runs the full Director > Narrator agent pipeline.
     This is a BLOCKING (synchronous) function.
     """
-    # 1. Load state
+    # Load current state
     world_state = load_json_data('data/world_state.json')
-    solution = load_json_data('data/solution.json')
     
-    # --- NEW: LOAD CONVERSATION HISTORY ---
-    # Get the history, or an empty list if it's not there
-    conversation_history = world_state.get('conversation_history', [])
-    # Get just the last 5 turns (10 lines: 5 player, 5 agent)
-    recent_history = conversation_history[-10:]
-
-    # 2. Run Director
+    # Run Director
     print("Director is thinking...")
-    director_decision = director_chain.invoke({
-        "solution": json.dumps(solution),
-        "world_state": json.dumps(world_state),
-        "action": player_action,
-        "format_instructions": director_parser.get_format_instructions(),
-        # --- NEW: PASS THE HISTORY ---
-        "conversation_history": json.dumps(recent_history) # Pass the recent history as a string
-    })
-
-    # (Debug print block - keep this!)
-    print("\n--- DIRECTOR'S OUTPUT (DEBUG) ---")
-    print(f"Narrator Prompt: {director_decision['narrator_prompt']}")
-    print(f"Interactables:   {director_decision['interactable_list']}")
-    print("----------------------------------\n")
-
-    # 3. Run Narrator
-    print("Narrator is writing...")
-    narrator_output = narrator_chain.invoke({
-        "director_command": director_decision['narrator_prompt'],
-        "format_instructions": narrator_parser.get_format_instructions()
-    })
-
-    # 4. Update and save state
-    print("Updating world state...")
+    director_decision = invoke_director(player_action, world_state)
     
-    # Update simple state
-    world_state['current_location'] = director_decision['new_location']
+    # Debug output
+    print("\n--- DIRECTOR'S OUTPUT (DEBUG) ---")
+    print(f"Event Type: {director_decision['narrator_event']['event_type']}")
+    print(f"Interactables: {director_decision['interactables']}")
+    print(f"Items Taken: {director_decision.get('items_taken', [])}")
+    print(f"Clues Discovered: {director_decision.get('clues_discovered', [])}")
+    if director_decision.get('generated_items'):
+        print(f"Generated: {[i['name'] for i in director_decision['generated_items']]}")
+    print("----------------------------------\n")
+    
+    # Run Narrator
+    print("Narrator is writing...")
+    narrator_output = invoke_narrator(director_decision['narrator_event'])
+    
+    # Update world state
+    print("Updating world state...")
+    new_location = director_decision['new_location']
+    world_state['current_location'] = new_location
     world_state['progress'] = director_decision['progress_update']
     
-    # Update lists safely
+    # Track visited locations
+    visited = world_state.get('visited_locations', [])
+    if new_location not in visited:
+        visited.append(new_location)
+        world_state['visited_locations'] = visited
+    
     old_clues = world_state.get('discovered_clues', [])
     old_suspects = world_state.get('interviewed_suspects', [])
-    world_state['discovered_clues'] = list(set(old_clues + director_decision['clues_discovered']))
-    world_state['interviewed_suspects'] = list(set(old_suspects + director_decision.get('interviewed_suspects', [])))
+    world_state['discovered_clues'] = list(set(old_clues + director_decision.get('clues_discovered', [])))
+    world_state['interviewed_suspects'] = list(set(old_suspects + director_decision.get('suspects_interviewed', [])))
     
-    # --- NEW: SAVE CONVERSATION HISTORY (OPTIMIZED) ---
-    # Add the player's action
+    # Handle items taken - add to inventory
+    items_taken = director_decision.get('items_taken', [])
+    if items_taken:
+        print(f"Adding to inventory: {items_taken}")
+        for item_id in items_taken:
+            # For key clues (c1, c2, c3), create proper item data
+            if item_id in ['c1', 'c2', 'c3']:
+                solution = load_json_data('data/solution.json')
+                for clue in solution.get('key_clues', []):
+                    if clue['id'] == item_id:
+                        item_data = {
+                            'id': item_id,
+                            'name': clue['name'],
+                            'description': clue['description'],
+                            'portable': True,
+                            'category': 'evidence',
+                            'is_key_clue': True
+                        }
+                        memory_manager.save_item(item_id, item_data)
+                        break
+            # Transfer to inventory
+            memory_manager.transfer_item_to_inventory(item_id)
+    
+    conversation_history = world_state.get('conversation_history', [])
     conversation_history.append({"role": "player", "action": player_action})
-    # Add ONLY the NPC dialogue lines from the Narrator's output
-    for line in narrator_output['scene']:
-        if line['speaker'] != 'NARRATOR':
+    
+    for line in narrator_output.get('scene', []):
+        if line.get('speaker') != 'NARRATOR':
             conversation_history.append({"role": line['speaker'], "dialogue": line['text']})
     
-    # Prune history to keep token costs low (e.g., last 20 lines)
     world_state['conversation_history'] = conversation_history[-20:]
-
     save_json_data('data/world_state.json', world_state)
     print("World state updated.")
-
+    
     return director_decision, narrator_output
 
-# === 5. WEBSOCKET ENDPOINT ===
+
+# === 6. WEBSOCKET ENDPOINT ===
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     player_id = await manager.connect(websocket)
@@ -161,133 +259,114 @@ async def websocket_endpoint(websocket: WebSocket):
             data = await websocket.receive_text()
             payload = json.loads(data)
             
+            # Handle nickname setting (lobby)
             if payload["type"] == "nickname":
                 await manager.set_nickname(player_id, payload["nickname"])
             
+            # Handle game start request
+            elif payload["type"] == "start_game":
+                if game_state.in_lobby:
+                    case_id = payload.get("case", "iris_bell")
+                    game_state.start_game(case_id)
+                    await manager.broadcast_game_start(case_id)
+                    print(f"Game started: {case_id}")
+            
+            # Handle chat/actions (in-game)
             elif payload["type"] == "chat":
+                if game_state.in_lobby:
+                    continue  # Ignore chat in lobby
+                
                 player_action = payload["text"]
                 await manager.broadcast(player_id, player_action)
                 
-                director_decision, narrator_output = await asyncio.to_thread(
-                    run_game_turn_sync, player_action
-                )
-
-                await manager.broadcast_scene(narrator_output['scene'])
-
-                if director_decision.get('interactable_list'):
-                    interact_list_str = ", ".join(director_decision['interactable_list'])
-                    await manager.broadcast_system(f"Interactable: {interact_list_str}")
+                # Special commands
+                if player_action.lower() == "/inventory":
+                    items = memory_manager.get_inventory_items()
+                    if items:
+                        item_names = [f"- {item['name']}" for item in items]
+                        await manager.broadcast_system("[Inventory]\n" + "\n".join(item_names))
+                    else:
+                        await manager.broadcast_system("[Inventory] Empty.")
+                    continue
+                
+                if player_action.lower() == "/reset":
+                    reset_game()
+                    game_state.reset_to_lobby()
+                    await manager.broadcast_system("[RESET] Game has been reset.")
+                    await manager.broadcast_player_list()
+                    continue
+                
+                if player_action.lower() == "/lobby":
+                    game_state.reset_to_lobby()
+                    await manager.broadcast_system("[LOBBY] Returning to lobby...")
+                    continue
+                
+                # Run game turn
+                try:
+                    await manager.broadcast_processing(True)
+                    director_decision, narrator_output = await asyncio.to_thread(
+                        run_game_turn_sync, player_action
+                    )
+                    
+                    await manager.broadcast_scene(narrator_output['scene'])
+                    
+                    if director_decision.get('interactables'):
+                        interact_list = director_decision['interactables']
+                        await manager.broadcast_system(f"[Interactable] {', '.join(interact_list)}")
+                    
+                except Exception as e:
+                    print(f"Game turn error: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    await manager.broadcast_system("[Error] Something went wrong. Try again.")
+                finally:
+                    await manager.broadcast_processing(False)
 
     except WebSocketDisconnect:
-        manager.disconnect(player_id)
+        await manager.disconnect(player_id)
     except Exception as e:
-        print(f"An error occurred in websocket: {e}")
+        print(f"WebSocket error: {e}")
         import traceback
         traceback.print_exc()
-        manager.disconnect(player_id)
+        await manager.disconnect(player_id)
 
 
-# === 6. HTML/JS CLIENT ===
+# === 7. REST ENDPOINTS ===
+@app.post("/reset")
+async def reset_endpoint():
+    """API endpoint to reset the game."""
+    reset_game()
+    game_state.reset_to_lobby()
+    return {"status": "reset", "message": "Game has been reset"}
+
+
+@app.get("/state")
+async def get_state():
+    """Get current game state (for debugging)."""
+    world_state = load_json_data('data/world_state.json')
+    memory = memory_manager.load_memory()
+    return {
+        "in_lobby": game_state.in_lobby,
+        "current_case": game_state.current_case,
+        "players": manager.get_player_list(),
+        "world_state": world_state,
+        "memory": memory
+    }
+
+
+# === 8. STATIC FILES & HTML ===
 @app.get("/")
 async def get():
-    html = """
-    <!DOCTYPE html>
-    <html style="background-color: #1a1a1a; color: #e0e0e0;">
-    <head>
-        <title>Agentic Noir</title>
-        <style>
-            body { font-family: 'Consolas', 'Courier New', monospace; max-width: 800px; margin: 20px auto; }
-            h3 { color: #ffc107; }
-            #log {
-                width: 100%;
-                background-color: #2b2b2b;
-                color: #e0e0e0;
-                border: 1px solid #555;
-                padding: 10px;
-                box-sizing: border-box;
-                border-radius: 4px;
-                font-family: inherit;
-                height: 400px;
-            }
-            #msg {
-                width: 70%;
-                padding: 8px;
-                border: 1px solid #555;
-                background-color: #3b3b3b;
-                color: #e0e0e0;
-                border-radius: 4px;
-            }
-            button {
-                padding: 8px 12px;
-                background-color: #ffc107;
-                color: #1a1a1a;
-                border: none;
-                cursor: pointer;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-        </style>
-    </head>
-    <body>
-        <h3>🕵️ Agentic Noir</h3>
-        <div id="idLabel">Connecting...</div>
-        <textarea id="log" rows="20" cols="80" readonly></textarea><br>
-        <input id="msg" placeholder="Describe your action..." onkeydown="event.key === 'Enter' && sendMsg()" />
-        <button onclick="sendMsg()">Send</button>
+    """Serve the main game HTML from static folder."""
+    static_path = os.path.join(base_dir, "static", "index.html")
+    return FileResponse(static_path)
 
-        <script>
-            let ws = new WebSocket("ws://" + window.location.host + "/ws");
-            let myID = null;
-            let nickname = null;
-            let log = document.getElementById('log');
-            
-            function addSceneLog(speaker, style, text) {
-                if (speaker === "NARRATOR") {
-                    log.value += `\\n[NARRATOR] (${style}): ${text}\\n\\n`;
-                } else {
-                     log.value += `  [${speaker}] (${style}): "${text}"\\n`;
-                }
-                log.scrollTop = log.scrollHeight;
-            }
 
-            ws.onmessage = (event) => {
-                let data = JSON.parse(event.data);
-                
-                switch (data.type) {
-                    case "assign_id":
-                        myID = data.player_id;
-                        nickname = prompt("Enter your detective name:");
-                        if (!nickname) nickname = "Detective-" + myID.slice(-3);
-                        ws.send(JSON.stringify({type: "nickname", nickname: nickname}));
-                        document.getElementById("idLabel").innerText = "You are " + nickname;
-                        break;
-                    
-                    case "system":
-                        log.value += `[SYSTEM]: ${data.text}\\n`;
-                        break;
-                    
-                    case "chat":
-                        log.value += `[${data.sender}]: ${data.text}\\n`;
-                        break;
-                    
-                    case "scene":
-                        data.data.forEach(line => {
-                            addSceneLog(line.speaker, line.style, line.text);
-                        });
-                        break;
-                }
-                log.scrollTop = log.scrollHeight; // Auto-scroll
-            };
-
-            function sendMsg() {
-                let msg = document.getElementById('msg').value;
-                if (msg) {
-                    ws.send(JSON.stringify({type: "chat", text: msg}));
-                    document.getElementById('msg').value = "";
-                }
-            }
-        </script>
-    </body>
-    </html>
-    """
-    return HTMLResponse(html)
+# === 9. STARTUP ===
+@app.on_event("startup")
+async def startup_event():
+    """Initialize game state on server start."""
+    print("[Agentic Noir] Server starting up...")
+    reset_game()  # Reset world state and memory on every server start
+    game_state.reset_to_lobby()
+    print("[Agentic Noir] Server ready.")

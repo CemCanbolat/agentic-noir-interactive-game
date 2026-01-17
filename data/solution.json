@@ -2,9 +2,9 @@
 "victim": {"name": "Iris Bell", "description": "A luminous torch singer at The Silver Gull nightclub in Greywater City; known for a sapphire locket and a habit of keeping every contract carbon in her vanity."},
 "crime_scene": "Backstage dressing room at The Silver Gull, Dockside District, Greywater City, on a rain-lashed night in 1947.",
 "suspects": [
-{"name": "Miriam Kline", "description": "Angular, quick-fingered pianist and arranger with a portable Underwood typewriter and a temper kept under a lid.", "connection": "Iris’s accompanist, songwriter, and once her closest confidante; lately sidelined as Iris courted a major-label deal.", "alibi": "Claims she was performing live on WRCN’s 'Night Owls Revue' from 10–11 p.m.; the announcer and studio engineer remember her at the station, and she says she never left the studio while the ON AIR light was glowing."},
-{"name": "Claude Delaney", "description": "Silk-tongued owner of The Silver Gull, white suit gone gray at the cuffs; drowning in gambling markers.", "connection": "Iris’s employer and rumored lover; stood to lose his headliner—and leverage—if she jumped to a label.", "alibi": "Says he was in a high-stakes poker game at the Crescent Hotel from 9 p.m. to 1 a.m.; four players, the elevator man, and the switchboard logs put him on the 15th floor the entire hour of the murder."},
-{"name": "Lt. Frank Rourke", "description": "Weathered vice-squad lieutenant with a scar like a second frown; doesn’t mind rain or pay envelopes.", "connection": "A sometime protector and secret paramour of Iris; she was said to be holding receipts that could sink him.", "alibi": "Booked in on a vice raid at the Havana Rooms from 10 to 11:30 p.m.; charge sheets and three officers back him up."}
+{"name": "Miriam Kline", "description": "Angular, quick-fingered pianist and arranger with a portable Underwood typewriter and a temper kept under a lid.", "connection": "Iris’s accompanist, songwriter, and once her closest confidante; lately sidelined as Iris courted a major-label deal.", "alibi": "Claims she was performing live on WRCN’s 'Night Owls Revue' from 10–11 p.m.; the announcer and studio engineer remember her at the station, and she says she never left the studio while the ON AIR light was glowing.", "initial_location": "The Silver Gull - rehearsal room"},
+{"name": "Claude Delaney", "description": "Silk-tongued owner of The Silver Gull, white suit gone gray at the cuffs; drowning in gambling markers.", "connection": "Iris’s employer and rumored lover; stood to lose his headliner—and leverage—if she jumped to a label.", "alibi": "Says he was in a high-stakes poker game at the Crescent Hotel from 9 p.m. to 1 a.m.; four players, the elevator man, and the switchboard logs put him on the 15th floor the entire hour of the murder.", "initial_location": "The Silver Gull - main bar"},
+{"name": "Lt. Frank Rourke", "description": "Weathered vice-squad lieutenant with a scar like a second frown; doesn’t mind rain or pay envelopes.", "connection": "A sometime protector and secret paramour of Iris; she was said to be holding receipts that could sink him.", "alibi": "Booked in on a vice raid at the Havana Rooms from 10 to 11:30 p.m.; charge sheets and three officers back him up.", "initial_location": "Police Station"}
 ],
 "culprit": "Miriam Kline",
 "motive": "Iris discovered a forged publishing transfer Miriam typed, cutting Iris out of songwriting royalties if she signed her new record deal. Iris threatened to go to the district attorney—using Rourke as the door—and to name Miriam as the forger. Facing ruin and the loss of the only career she had, Miriam strangled Iris in a desperate bid to keep the betrayal buried.",
@@ -13,5 +13,23 @@
 {"id": "c2", "name": "Piano Wire Sleeve and Rosin Smears", "location": "Backstage rehearsal room at The Silver Gull—hidden in the little compartment inside the piano bench lid", "description": "A torn paper sleeve for a No. 2 treble wire with rosin traces and a partial fingerprint matching Miriam. The victim’s ligature marks show fine ridging consistent with a treble string rather than a scarf or cord."},
 {"id": "c3", "name": "Carbon Copy of a Publishing Transfer", "location": "Miriam Kline’s apartment—taped behind a framed publicity photo above the upright piano", "description": "A carbon copy assigning song rights from Iris to Miriam. The typing shows a distinct misaligned 'Q' and a chipped lowercase 'e' that match Miriam’s portable Underwood; Iris’s signature is a traced forgery."}
 ],
-"red_herring": {"name": "Monogrammed Cufflink", "location": "Alley storm drain behind The Silver Gull", "description": "A brass cufflink engraved 'FR' snagged in the grate. It seems to place Lt. Rourke near the scene, but he lost it during a quarrel with Iris the previous night and never returned.", "points_to": "Lt. Frank Rourke"}
+"red_herring": {"name": "Monogrammed Cufflink", "location": "Alley storm drain behind The Silver Gull", "description": "A brass cufflink engraved 'FR' snagged in the grate. It seems to place Lt. Rourke near the scene, but he lost it during a quarrel with Iris the previous night and never returned.", "points_to": "Lt. Frank Rourke"},
+"anchor_locations": {
+    "c1": {"location": "WRCN Radio - control room", "container": "archive cabinet"},
+    "c2": {"location": "The Silver Gull - rehearsal room", "container": "piano"},
+    "c3": {"location": "Miriam Kline's apartment", "container": "framed photo"}
+},
+"known_locations": [
+    "The Silver Gull",
+    "The Silver Gull - backstage dressing room",
+    "The Silver Gull - rehearsal room", 
+    "The Silver Gull - main bar",
+    "The Silver Gull - alley",
+    "WRCN Radio station",
+    "WRCN Radio - control room",
+    "Crescent Hotel",
+    "Miriam Kline's apartment",
+    "Police Station",
+    "Greywater City streets"
+]
 }
