@@ -1,0 +1,27 @@
+{
+    "physics": {
+        "portable": {
+            "description": "Items that can be picked up and carried",
+            "examples": ["papers", "clothing", "keys", "small objects", "photographs", "letters", "jewelry", "matchbooks", "cigarettes", "bottles"]
+        },
+        "heavy": {
+            "description": "Items too heavy to carry but can be moved slightly",
+            "examples": ["chairs", "small tables", "crates", "luggage"]
+        },
+        "immovable": {
+            "description": "Cannot be moved or taken",
+            "examples": ["furniture", "safes", "pianos", "radiators", "fixtures", "doors", "walls"]
+        }
+    },
+    "generation": {
+        "max_items_per_location": 5,
+        "max_npcs_per_location": 2,
+        "item_detail_level": "surface_only",
+        "era": "1947",
+        "tone": "film noir, gritty, atmospheric"
+    },
+    "interactions": {
+        "allowed": ["inspect", "take", "use", "talk", "move", "search", "open", "smell", "listen"],
+        "requires_item": ["use", "unlock", "give", "show"]
+    }
+}

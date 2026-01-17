@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic Noir - Film Noir Detective Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0d0d0d;
+            --bg-medium: #1a1a1a;
+            --bg-light: #2b2b2b;
+            --text-primary: #e0e0e0;
+            --text-dim: #888;
+            --accent-gold: #d4a843;
+            --accent-red: #8b0000;
+            --npc-blue: #7cb7ff;
+            --player-green: #8bc34a;
+        }
+        
+        * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Courier Prime', 'Consolas', monospace;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #1a1515 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* === LOBBY SCREEN === */
+        #lobby-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .logo {
+            font-family: 'Special Elite', cursive;
+            font-size: 3.5rem;
+            color: var(--accent-gold);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+            letter-spacing: 3px;
+        }
+        
+        .tagline {
+            color: var(--text-dim);
+            font-size: 1.1rem;
+            margin-bottom: 40px;
+            font-style: italic;
+        }
+        
+        .lobby-card {
+            background: var(--bg-medium);
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 30px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        
+        .lobby-section {
+            margin-bottom: 25px;
+        }
+        
+        .lobby-section h3 {
+            color: var(--accent-gold);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 8px;
+        }
+        
+        .nickname-input {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .nickname-input input {
+            flex: 1;
+            padding: 12px 15px;
+            background: var(--bg-light);
+            border: 1px solid #444;
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+        }
+        
+        .nickname-input input:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+        
+        .nickname-input button {
+            padding: 12px 20px;
+            background: var(--accent-gold);
+            color: var(--bg-dark);
+            border: none;
+            border-radius: 4px;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .nickname-input button:hover {
+            background: #e5b954;
+        }
+        
+        .player-list {
+            list-style: none;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .player-list li {
+            padding: 10px 15px;
+            background: var(--bg-light);
+            border-radius: 4px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .player-list li.you {
+            border-left: 3px solid var(--accent-gold);
+        }
+        
+        .player-badge {
+            width: 10px;
+            height: 10px;
+            background: var(--player-green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .case-select {
+            width: 100%;
+            padding: 12px 15px;
+            background: var(--bg-light);
+            border: 1px solid #444;
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        
+        .case-description {
+            margin-top: 15px;
+            padding: 15px;
+            background: rgba(212, 168, 67, 0.1);
+            border-left: 3px solid var(--accent-gold);
+            border-radius: 0 4px 4px 0;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        .start-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, var(--accent-gold) 0%, #b8942f 100%);
+            color: var(--bg-dark);
+            border: none;
+            border-radius: 4px;
+            font-family: 'Special Elite', cursive;
+            font-size: 1.3rem;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .start-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(212, 168, 67, 0.3);
+        }
+        
+        .start-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .waiting-text {
+            text-align: center;
+            color: var(--text-dim);
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+        
+        /* === GAME SCREEN === */
+        #game-screen {
+            display: none;
+            flex-direction: column;
+            height: 100vh;
+            padding: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .game-title {
+            font-family: 'Special Elite', cursive;
+            font-size: 1.5rem;
+            color: var(--accent-gold);
+        }
+        
+        .game-info {
+            display: flex;
+            gap: 20px;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+        
+        .players-online {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .players-online .dot {
+            width: 8px;
+            height: 8px;
+            background: var(--player-green);
+            border-radius: 50%;
+        }
+        
+        #game-log {
+            flex: 1;
+            background: var(--bg-medium);
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            overflow-y: auto;
+            line-height: 1.7;
+        }
+        
+        .log-entry {
+            margin-bottom: 15px;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { 
+                opacity: 0; 
+                transform: translateY(10px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
+        }
+        
+        .log-narrator {
+            color: var(--text-dim);
+            font-style: italic;
+            padding-left: 20px;
+            border-left: 2px solid #444;
+        }
+        
+        .log-npc {
+            color: var(--npc-blue);
+        }
+        
+        .log-npc .speaker {
+            font-weight: bold;
+        }
+        
+        .log-player {
+            color: var(--player-green);
+        }
+        
+        .log-system {
+            color: var(--accent-gold);
+            font-size: 0.9rem;
+        }
+        
+        .input-area {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        #action-input {
+            flex: 1;
+            padding: 15px;
+            background: var(--bg-light);
+            border: 1px solid #444;
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 1rem;
+        }
+        
+        #action-input:focus {
+            outline: none;
+            border-color: var(--accent-gold);
+        }
+        
+        .send-btn {
+            padding: 15px 25px;
+            background: var(--accent-gold);
+            color: var(--bg-dark);
+            border: none;
+            border-radius: 4px;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .send-btn:hover {
+            background: #e5b954;
+        }
+        
+        .game-commands {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            font-size: 0.85rem;
+        }
+        
+        .cmd-btn {
+            padding: 8px 15px;
+            background: transparent;
+            border: 1px solid #444;
+            color: var(--text-dim);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .cmd-btn:hover {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+        
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <!-- LOBBY SCREEN -->
+    <div id="lobby-screen">
+        <h1 class="logo">AGENTIC NOIR</h1>
+        <p class="tagline">A Collaborative Detective Experience</p>
+        
+        <div class="lobby-card">
+            <div class="lobby-section" id="nickname-section">
+                <h3>Your Identity</h3>
+                <div class="nickname-input">
+                    <input type="text" id="nickname-input" placeholder="Enter your detective name..." maxlength="20">
+                    <button id="set-nickname-btn">Join</button>
+                </div>
+            </div>
+            
+            <div class="lobby-section">
+                <h3>Detectives in Lobby</h3>
+                <ul class="player-list" id="player-list">
+                    <li class="waiting"><em>Waiting for players...</em></li>
+                </ul>
+            </div>
+            
+            <div class="lobby-section">
+                <h3>Select Case</h3>
+                <select class="case-select" id="case-select">
+                    <option value="iris_bell">The Iris Bell Murder</option>
+                </select>
+                <div class="case-description" id="case-description">
+                    <strong>Greywater City, 1947.</strong> A torch singer lies dead in her dressing room at The Silver Gull nightclub. 
+                    Three suspects. One truth. The rain won't stop, and neither will you.
+                </div>
+            </div>
+            
+            <button class="start-btn" id="start-btn" disabled>Begin Investigation</button>
+            <p class="waiting-text" id="waiting-text">Waiting for at least 1 player to join...</p>
+        </div>
+    </div>
+    
+    <!-- GAME SCREEN -->
+    <div id="game-screen">
+        <div class="game-header">
+            <h1 class="game-title">The Iris Bell Murder</h1>
+            <div class="game-info">
+                <div class="players-online">
+                    <span class="dot"></span>
+                    <span id="online-count">1 detective</span>
+                </div>
+                <span id="location-display">The Silver Gull</span>
+            </div>
+        </div>
+        
+        <div id="game-log"></div>
+        
+        <div class="input-area">
+            <input type="text" id="action-input" placeholder="Describe your action..." />
+            <button class="send-btn" id="send-btn">Send</button>
+        </div>
+        
+        <div class="game-commands">
+            <button class="cmd-btn" onclick="sendCommand('/inventory')">Inventory</button>
+            <button class="cmd-btn" onclick="sendCommand('/reset')">Reset Game</button>
+        </div>
+    </div>
+
+    <script>
+        // === STATE ===
+        let ws = null;
+        let myID = null;
+        let myNickname = null;
+        let gameStarted = false;
+        let players = {};
+        
+        // === DOM ELEMENTS ===
+        const lobbyScreen = document.getElementById('lobby-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const nicknameInput = document.getElementById('nickname-input');
+        const setNicknameBtn = document.getElementById('set-nickname-btn');
+        const nicknameSection = document.getElementById('nickname-section');
+        const playerList = document.getElementById('player-list');
+        const startBtn = document.getElementById('start-btn');
+        const waitingText = document.getElementById('waiting-text');
+        const gameLog = document.getElementById('game-log');
+        const actionInput = document.getElementById('action-input');
+        const sendBtn = document.getElementById('send-btn');
+        const onlineCount = document.getElementById('online-count');
+        
+        // === WEBSOCKET CONNECTION ===
+        function connect() {
+            ws = new WebSocket("ws://" + window.location.host + "/ws");
+            
+            ws.onopen = () => {
+                console.log("Connected to server");
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleMessage(data);
+            };
+            
+            ws.onclose = () => {
+                console.log("Disconnected from server");
+                setTimeout(connect, 2000);
+            };
+        }
+        
+        // === MESSAGE HANDLER ===
+        function handleMessage(data) {
+            switch (data.type) {
+                case "assign_id":
+                    myID = data.player_id;
+                    break;
+                    
+                case "player_list":
+                    updatePlayerList(data.players);
+                    break;
+                    
+                case "game_started":
+                    startGame(data);
+                    break;
+                    
+                case "system":
+                    addLogEntry('system', data.text);
+                    break;
+                    
+                case "chat":
+                    addLogEntry('player', `[${data.sender}] ${data.text}`);
+                    break;
+                    
+                case "scene":
+                    data.data.forEach(line => {
+                        if (line.speaker === "NARRATOR") {
+                            addLogEntry('narrator', line.text);
+                        } else {
+                            addLogEntry('npc', `<span class="speaker">${line.speaker}:</span> "${line.text}"`);
+                        }
+                    });
+                    break;
+            }
+        }
+        
+        // === LOBBY FUNCTIONS ===
+        function updatePlayerList(playerData) {
+            players = playerData;
+            const count = Object.keys(players).length;
+            
+            if (count === 0) {
+                playerList.innerHTML = '<li class="waiting"><em>Waiting for players...</em></li>';
+            } else {
+                playerList.innerHTML = Object.entries(players).map(([id, info]) => {
+                    const isYou = id === myID;
+                    const name = info.nickname || `Detective-${id.slice(-3)}`;
+                    return `<li class="${isYou ? 'you' : ''}">
+                        <span class="player-badge"></span>
+                        ${escapeHtml(name)} ${isYou ? '(you)' : ''}
+                    </li>`;
+                }).join('');
+            }
+            
+            // Update start button state
+            const readyCount = Object.values(players).filter(p => p.nickname).length;
+            if (readyCount >= 1 && myNickname) {
+                startBtn.disabled = false;
+                waitingText.textContent = `${readyCount} detective${readyCount > 1 ? 's' : ''} ready. Anyone can start the game.`;
+            } else {
+                startBtn.disabled = true;
+                waitingText.textContent = 'Enter your name to join...';
+            }
+            
+            // Update online count in game
+            onlineCount.textContent = `${count} detective${count !== 1 ? 's' : ''}`;
+        }
+        
+        function setNickname() {
+            const name = nicknameInput.value.trim();
+            if (name && ws) {
+                myNickname = name;
+                ws.send(JSON.stringify({ type: "nickname", nickname: name }));
+                
+                // Update UI
+                nicknameInput.disabled = true;
+                setNicknameBtn.disabled = true;
+                setNicknameBtn.textContent = 'Joined!';
+            }
+        }
+        
+        function requestStartGame() {
+            if (ws) {
+                ws.send(JSON.stringify({ type: "start_game", case: document.getElementById('case-select').value }));
+            }
+        }
+        
+        function startGame(data) {
+            gameStarted = true;
+            lobbyScreen.style.display = 'none';
+            gameScreen.style.display = 'flex';
+            
+            // Add intro message
+            if (data.intro) {
+                addLogEntry('system', data.intro);
+            }
+        }
+        
+        // === GAME FUNCTIONS ===
+        function addLogEntry(type, content) {
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.innerHTML = content;
+            gameLog.appendChild(entry);
+            gameLog.scrollTop = gameLog.scrollHeight;
+        }
+        
+        function sendAction() {
+            const text = actionInput.value.trim();
+            if (text && ws) {
+                ws.send(JSON.stringify({ type: "chat", text: text }));
+                actionInput.value = '';
+            }
+        }
+        
+        function sendCommand(cmd) {
+            if (ws) {
+                ws.send(JSON.stringify({ type: "chat", text: cmd }));
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // === EVENT LISTENERS ===
+        setNicknameBtn.addEventListener('click', setNickname);
+        nicknameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') setNickname();
+        });
+        
+        startBtn.addEventListener('click', requestStartGame);
+        
+        sendBtn.addEventListener('click', sendAction);
+        actionInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') sendAction();
+        });
+        
+        // === INIT ===
+        connect();
+    </script>
+</body>
+</html>

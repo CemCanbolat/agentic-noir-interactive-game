@@ -2,5 +2,19 @@
     "current_location": "The Silver Gull",
     "discovered_clues": [],
     "interviewed_suspects": [],
-    "progress": 0
+    "progress": 0,
+    "suspect_locations": {
+        "Miriam Kline": "The Silver Gull - rehearsal room",
+        "Claude Delaney": "The Silver Gull - main bar",
+        "Lt. Frank Rourke": "Police Station"
+    },
+    "visited_locations": ["The Silver Gull"],
+    "known_locations": [
+        "The Silver Gull",
+        "WRCN Radio station",
+        "Police Station",
+        "Crescent Hotel",
+        "Greywater City streets"
+    ],
+    "conversation_history": []
 }

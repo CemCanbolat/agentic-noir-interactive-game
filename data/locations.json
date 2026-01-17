@@ -1,0 +1,80 @@
+{
+    "locations": {
+        "The Silver Gull": {
+            "type": "building",
+            "initially_accessible": true,
+            "sub_locations": ["main bar", "backstage dressing room", "rehearsal room", "alley"],
+            "ambient_npcs": ["bartender", "waiter"],
+            "atmosphere": "smoky jazz club, neon lights, the smell of whiskey and cheap perfume"
+        },
+        "The Silver Gull - main bar": {
+            "type": "room",
+            "parent": "The Silver Gull",
+            "ambient_npcs": ["bartender"],
+            "atmosphere": "dim lighting, polished wood bar, rows of dusty bottles"
+        },
+        "The Silver Gull - backstage dressing room": {
+            "type": "room",
+            "parent": "The Silver Gull",
+            "ambient_npcs": [],
+            "atmosphere": "crime scene tape, the lingering scent of perfume, vanity mirrors"
+        },
+        "The Silver Gull - rehearsal room": {
+            "type": "room",
+            "parent": "The Silver Gull",
+            "ambient_npcs": [],
+            "atmosphere": "grand piano, scattered sheet music, the smell of rosin"
+        },
+        "The Silver Gull - alley": {
+            "type": "outdoor",
+            "parent": "The Silver Gull",
+            "ambient_npcs": [],
+            "atmosphere": "rain-slicked pavement, garbage cans, a single flickering light"
+        },
+        "WRCN Radio station": {
+            "type": "building",
+            "initially_accessible": true,
+            "sub_locations": ["lobby", "control room", "recording studio"],
+            "ambient_npcs": ["receptionist"],
+            "atmosphere": "art deco lobby, the hum of electricity, vintage broadcast posters"
+        },
+        "WRCN Radio - control room": {
+            "type": "room",
+            "parent": "WRCN Radio station",
+            "ambient_npcs": ["sound engineer"],
+            "atmosphere": "soundboard covered in dials, archive cabinets, the smell of warm electronics"
+        },
+        "Police Station": {
+            "type": "building",
+            "initially_accessible": true,
+            "sub_locations": ["front desk", "detective bullpen", "interrogation room"],
+            "ambient_npcs": ["desk sergeant"],
+            "atmosphere": "harsh fluorescent lights, the clatter of typewriters, wanted posters"
+        },
+        "Crescent Hotel": {
+            "type": "building",
+            "initially_accessible": true,
+            "sub_locations": ["lobby", "15th floor"],
+            "ambient_npcs": ["bellhop", "elevator operator"],
+            "atmosphere": "faded grandeur, marble floors, the smell of old money"
+        },
+        "Miriam Kline's apartment": {
+            "type": "building",
+            "initially_accessible": false,
+            "discovery_hint": "Learn about Miriam's address from an NPC or document",
+            "ambient_npcs": [],
+            "atmosphere": "modest musician's flat, upright piano, framed photos, sheet music everywhere"
+        },
+        "Greywater City streets": {
+            "type": "outdoor",
+            "initially_accessible": true,
+            "ambient_npcs": ["newsboy", "beat cop"],
+            "atmosphere": "rain-slicked streets, neon signs, the distant wail of a siren"
+        }
+    },
+    "navigation_rules": {
+        "sub_location_access": "If inside a building, all sub_locations are accessible",
+        "unknown_location_access": "Cannot travel to locations with initially_accessible=false until discovered",
+        "sensible_locations": "If player tries to go somewhere logical (e.g., 'the docks'), generate it dynamically"
+    }
+}
