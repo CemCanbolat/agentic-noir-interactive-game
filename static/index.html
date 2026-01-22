@@ -396,13 +396,42 @@
         background: var(--bg-dark);
       }
 
-      ::-webkit-scrollbar-thumb {
-        background: #444;
-        border-radius: 4px;
-      }
-
       ::-webkit-scrollbar-thumb:hover {
         background: #555;
+      }
+
+      /* Audio Button */
+      .play-audio-btn {
+        background: transparent;
+        border: 1px solid var(--accent-gold);
+        color: var(--accent-gold);
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 8px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.2s;
+        vertical-align: middle;
+      }
+
+      .play-audio-btn:hover {
+        background: var(--accent-gold);
+        color: var(--bg-dark);
+        transform: scale(1.1);
+      }
+      
+      .play-audio-btn.playing {
+        animation: pulse-gold 1s infinite;
+      }
+      
+      @keyframes pulse-gold {
+        0% { box-shadow: 0 0 0 0 rgba(212, 168, 67, 0.7); }
+        70% { box-shadow: 0 0 0 6px rgba(212, 168, 67, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(212, 168, 67, 0); }
       }
     </style>
   </head>
@@ -554,12 +583,20 @@
 
           case "scene":
             data.data.forEach((line) => {
+              let audioHtml = "";
+              if (line.audio_url) {
+                // Use a proper onclick handler that calls our global function
+                // Escaping the URL just in case
+                const safeUrl = line.audio_url.replace(/"/g, '&quot;');
+                audioHtml = `<button class="play-audio-btn" onclick="playAudio('${safeUrl}', this)">▶</button>`;
+              }
+
               if (line.speaker === "NARRATOR") {
                 addLogEntry("narrator", line.text);
               } else {
                 addLogEntry(
                   "npc",
-                  `<span class="speaker">${line.speaker}:</span> "${line.text}"`,
+                  `${audioHtml}<span class="speaker">${line.speaker}:</span> "${line.text}"`,
                 );
               }
             });
@@ -569,6 +606,49 @@
             setProcessingState(data.status);
             break;
         }
+      }
+
+      // === AUDIO HANDLER ===
+      let currentAudio = null;
+      let currentBtn = null;
+
+      function playAudio(url, btn) {
+        // Stop current if playing
+        if (currentAudio) {
+          currentAudio.pause();
+          currentAudio.currentTime = 0;
+          if (currentBtn) {
+            currentBtn.classList.remove("playing");
+            currentBtn.innerHTML = "▶";
+          }
+        }
+        
+        // If clicking same button, just stop
+        if (currentBtn === btn && !currentAudio.paused) {
+           currentAudio = null;
+           currentBtn = null;
+           return;
+        }
+
+        const audio = new Audio(url);
+        currentAudio = audio;
+        currentBtn = btn;
+        
+        btn.classList.add("playing");
+        btn.innerHTML = "■"; // Stop icon or just keeping visual state
+        
+        audio.onended = () => {
+          btn.classList.remove("playing");
+          btn.innerHTML = "▶";
+          currentAudio = null;
+          currentBtn = null;
+        };
+        
+        audio.play().catch(e => {
+            console.error("Audio playback error:", e);
+            btn.classList.remove("playing");
+            btn.innerHTML = "⚠️";
+        });
       }
 
       // === LOBBY FUNCTIONS ===

@@ -35,3 +35,17 @@ def reset_game():
     
     memory_manager.reset_memory()
     print("World memory reset.")
+    
+    # 3. Clean up audio files
+    import glob
+    audio_dir = os.path.join(BASE_DIR, "static", "audio")
+    try:
+        files = glob.glob(os.path.join(audio_dir, "*"))
+        for f in files:
+            try:
+                os.remove(f)
+            except OSError as e:
+                print(f"Error deleting {f}: {e}")
+        print("Audio cache cleared.")
+    except Exception as e:
+        print(f"Failed to clear audio cache: {e}")

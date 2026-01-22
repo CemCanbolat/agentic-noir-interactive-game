@@ -11,6 +11,9 @@ from langchain_core.output_parsers import JsonOutputParser
 from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
+from google import genai
+import uuid
+import pathlib
 
 # Load environment
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -22,8 +25,10 @@ load_dotenv(dotenv_path)
 class ScriptLine(BaseModel):
     """A single line of dialogue or narration for the scene."""
     speaker: str = Field(description="NARRATOR for narration, or character name for dialogue (e.g., 'MIRIAM KLINE', 'BARTENDER')")
-    style: str = Field(description="TTS style hint: 'low, gravelly', 'nervous, quick', 'cold, suspicious', etc.")
+    style: str = Field(description="TTS style hint: 'low, gravelly', 'nervous, quick', 'cold, suspicious', 'warm, inviting' etc.")
     text: str = Field(description="The actual line of dialogue or narration")
+    voice_suggestion: str = Field(description="For NEW characters, suggest a voice from the provided list (e.g. 'Zephyr', 'Puck'). Leave empty if unknown or NARRATOR.", default="")
+    audio_url: str = Field(description="Leave empty. Populated by system.", default="")
 
 
 class NarratorScene(BaseModel):
@@ -46,6 +51,13 @@ You transform structured events into immersive scenes.
 - **Short, punchy sentences** mixed with longer atmospheric ones
 - **Sensory details**: smoke, rain, neon, shadows, the smell of cheap whiskey
 - **Film noir vocabulary**: dame, gumshoe, copper, joint, heel, patsy
+
+## VOICE SELECTION
+- For **NEW** characters (speakers other than NARRATOR that are not in the 'Known Voices' list), you MUST select a fitting voice from the 'Voice Options' list.
+- Use the `voice_suggestion` field to specify this voice name.
+- Consider the character's archetype, age, and vibe when choosing.
+- **Voice Options**: {voice_options}
+- **Known Voices**: {known_voices}
 
 ## RULES
 
@@ -109,6 +121,8 @@ prompt = ChatPromptTemplate.from_messages([
     ("human", HUMAN_PROMPT)
 ])
 
+# Use PydanticOutputParser if needed, but JsonOutputParser is simpler for direct dictionary usage
+# However, modifying the wrapper to ensure persistence
 narrator_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.8, timeout=30)
 narrator_chain = prompt | narrator_llm | narrator_parser
 
@@ -123,11 +137,34 @@ def invoke_narrator(director_event: dict) -> dict:
     Returns:
         NarratorScene with list of ScriptLines
     """
+    # 1. Load Voice Data
+    voices_path = os.path.join(base_dir, "data", "voice_options.json")
+    char_voices_path = os.path.join(base_dir, "data", "character_voices.json")
+    
+    with open(voices_path, 'r') as f:
+        voice_data = json.load(f)
+        voice_list = ", ".join([f"{v['voice_name']} ({v.get('gender', 'unknown')})" for v in voice_data['voice_options']])
+        
+    known_voices = {}
+    if os.path.exists(char_voices_path):
+        with open(char_voices_path, 'r') as f:
+            known_voices = json.load(f)
+    
+    known_voices_str = ", ".join([f"{k}: {v}" for k, v in known_voices.items()])
+
+    # 2. Invoke Chain
     result = narrator_chain.invoke({
         "director_event": json.dumps(director_event, indent=2),
-        "format_instructions": narrator_parser.get_format_instructions()
+        "format_instructions": narrator_parser.get_format_instructions(),
+        "voice_options": voice_list,
+        "known_voices": known_voices_str
     })
-    return result
+    
+    # 3. Post-Process for Audio (TTS)
+    # We do this here so the 'scene' object returned to the game loop is fully populated with audio URLs
+    final_scene = process_scene_audio(result)
+    
+    return final_scene
 
 
 def format_scene_for_display(scene: dict) -> str:
@@ -142,21 +179,143 @@ def format_scene_for_display(scene: dict) -> str:
 
 
 # --- TTS Integration Point ---
+def process_scene_audio(scene: dict) -> dict:
+    """
+    Generates audio for character lines using Gemini TTS.
+    Updates the scene dict with audio_urls.
+    Persists new voice assignments.
+    """
+    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        print("[TTS] No GOOGLE_API_KEY or GEMINI_API_KEY found. Skipping TTS.")
+        return scene
+
+    client = genai.Client(api_key=api_key)
+    
+    char_voices_path = os.path.join(base_dir, "data", "character_voices.json")
+    static_audio_dir = os.path.join(base_dir, "static", "audio")
+    os.makedirs(static_audio_dir, exist_ok=True)
+    
+    # Load persistence
+    known_voices = {}
+    if os.path.exists(char_voices_path):
+        with open(char_voices_path, 'r') as f:
+            known_voices = json.load(f)
+            
+    voices_updated = False
+    
+    # Load voice options for gender lookup
+    voices_path = os.path.join(base_dir, "data", "voice_options.json")
+    voice_gender_map = {}
+    if os.path.exists(voices_path):
+        with open(voices_path, 'r') as f:
+            v_data = json.load(f)
+            for v in v_data.get('voice_options', []):
+                voice_gender_map[v['voice_name']] = v.get('gender', 'Unknown')
+
+    for line in scene.get('scene', []):
+        speaker = line.get('speaker', 'NARRATOR')
+        text = line.get('text', '')
+        style = line.get('style', '')
+        suggestion = line.get('voice_suggestion', '')
+        
+        # Skip Narrator (for now, unless we want a narrator voice)
+        if speaker == "NARRATOR":
+            continue
+            
+        # Determine Voice
+        voice_name = known_voices.get(speaker)
+        
+        if not voice_name:
+            if suggestion:
+                voice_name = suggestion
+                known_voices[speaker] = voice_name
+                voices_updated = True
+                print(f"[TTS] New voice assigned: {speaker} -> {voice_name}")
+            else:
+                # Fallback if no suggestion
+                voice_name = "Algenib" # Default fallback (Gravelly, Male)
+        
+
+
+        # Generate Audio
+        try:
+            # Using speech_config for voice selection (Standard Gemini API pattern)
+            # Prompt can now be just the text
+            tts_prompt = text
+            
+            # Using google-genai SDK
+            response = client.models.generate_content(
+                model='gemini-2.5-flash-preview-tts',
+                contents=tts_prompt,
+                config={
+                    'response_modalities': ['AUDIO'],
+                    'speech_config': {
+                        'voice_config': {
+                            'prebuilt_voice_config': {
+                                'voice_name': voice_name
+                            }
+                        }
+                    }
+                }
+            )
+            
+            # For TTS, the response usually contains binary data in specific field?
+            # Or response.bytes? 
+            # In the new SDK `response.candidates[0].content.parts[0].inline_data.data` is usually bytes.
+            # But recent SDK changes might make it `response.text` impossible.
+            # Let's try standard part access.
+            
+            audio_bytes = None
+            if response.candidates and response.candidates[0].content.parts:
+                for part in response.candidates[0].content.parts:
+                    if part.inline_data:
+                         audio_bytes = part.inline_data.data
+            
+            if audio_bytes:
+                filename = f"{uuid.uuid4()}.wav"
+                filepath = os.path.join(static_audio_dir, filename)
+                
+                # Gemini TTS output is raw PCM: 24kHz, 1 channel, 16-bit (2 bytes)
+                import wave
+                with wave.open(filepath, "wb") as wav_file:
+                    wav_file.setnchannels(1)
+                    wav_file.setsampwidth(2)
+                    wav_file.setframerate(24000)
+                    wav_file.writeframes(audio_bytes)
+                
+                # Set URL
+                line['audio_url'] = f"/static/audio/{filename}"
+            else:
+                print(f"[TTS] No audio data received for {speaker}.")
+        
+        except Exception as e:
+            print(f"[TTS] Error generating audio for {speaker}: {e}")
+
+    # Save assignments if changed
+    if voices_updated:
+        with open(char_voices_path, 'w') as f:
+            json.dump(known_voices, f, indent=2)
+
+    return scene
+
+
 def speak_scene(scene: dict) -> None:
     """
-    Process scene for TTS output.
-    Currently prints; future: integrate with TTS API.
+    Process scene for display (and now the audio is already processed).
     """
     print("\n--- SCENE ---")
     for line in scene.get('scene', []):
         speaker = line.get('speaker', 'NARRATOR')
         style = line.get('style', '')
         text = line.get('text', '')
+        audio = line.get('audio_url', '')
         
         if speaker == "NARRATOR":
             print(f"\n[NARRATOR] ({style}):\n  {text}\n")
         else:
-            print(f"  [{speaker}] ({style}): \"{text}\"")
+            audio_icon = "[AUDIO]" if audio else ""
+            print(f"  [{speaker}] ({style}) {audio_icon}: \"{text}\"")
     
     print("--- END SCENE ---\n")
 

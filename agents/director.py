@@ -229,6 +229,11 @@ For GENERATED NPCs (bartender, waiter, stagehand, etc.):
 - They cannot solve the mystery for the player
 - If player asks for "the bartender", generate a BARTENDER NPC, not Claude!
 
+## NPC CONTINUITY RULES (IMPORTANT)
+1. **Stick to the current conversation partner.** If player was talking to the WAITER, do not suddenly switch to the BARTENDER unless the player addresses them or moves.
+2. **Be scrupulous about identity.** Do not swap "Waitress" for "Waiter" or "Bartender" randomly.
+3. **If multiple NPCs are present**, specify exactly who is speaking in the `narrator_event`.
+
 ## EVENT TYPES
 
 - `location_reveal`: Player enters/surveys a new area (ONLY use when entering a NEW location)

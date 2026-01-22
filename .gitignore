@@ -205,3 +205,8 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Generated Audio
+static/audio/*.wav
+static/audio/*.mp3
+static/audio/*

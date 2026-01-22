@@ -1,5 +1,5 @@
 {
-    "current_location": "The Silver Gull",
+    "current_location": "The Silver Gull - rehearsal room",
     "discovered_clues": [],
     "interviewed_suspects": [],
     "progress": 0,
@@ -9,7 +9,9 @@
         "Lt. Frank Rourke": "Police Station"
     },
     "visited_locations": [
-        "The Silver Gull"
+        "The Silver Gull",
+        "The Silver Gull - main bar",
+        "The Silver Gull - rehearsal room"
     ],
     "known_locations": [
         "The Silver Gull",
@@ -21,7 +23,71 @@
     "conversation_history": [
         {
             "role": "player",
-            "action": "hi"
+            "action": "I check to see if I can find a girl in this bar"
+        },
+        {
+            "role": "player",
+            "action": "I will speak to a girl"
+        },
+        {
+            "role": "BARTENDER",
+            "dialogue": "What'll it be, friend? Looking for someone special?"
+        },
+        {
+            "role": "player",
+            "action": "Yeah, looking for a chick so I can talk about Iris bell"
+        },
+        {
+            "role": "BARTENDER",
+            "dialogue": "Iris? She's been around here, but you might want to check the rehearsal room. Heard she was working on something special."
+        },
+        {
+            "role": "player",
+            "action": "Where is your boss?"
+        },
+        {
+            "role": "BARTENDER",
+            "dialogue": "Claude? He's usually around here somewhere, but he's been a bit busy with... business lately. You might want to check the main bar."
+        },
+        {
+            "role": "player",
+            "action": "I go to claude and nod to him, sit right next to him"
+        },
+        {
+            "role": "player",
+            "action": "\"Hello mister how is your night\""
+        },
+        {
+            "role": "BARTENDER",
+            "dialogue": "Just another night in the club, friend. How about you? You look like you're on a mission."
+        },
+        {
+            "role": "player",
+            "action": "I asked to your boss, Claude"
+        },
+        {
+            "role": "CLAUDE DELANEY",
+            "dialogue": "'What can I do for you, friend?'"
+        },
+        {
+            "role": "player",
+            "action": "Where is Miriam"
+        },
+        {
+            "role": "CLAUDE DELANEY",
+            "dialogue": "Miriam? She's in the rehearsal room, probably tinkering with that piano of hers."
+        },
+        {
+            "role": "player",
+            "action": "I nod to him, stand up and go to see the Miriam in rehearsing room"
+        },
+        {
+            "role": "player",
+            "action": "\"Hi miss Miriam, how is your night? May I interrupt you for a second\""
+        },
+        {
+            "role": "MIRIAM KLINE",
+            "dialogue": "It's just another night, but I suppose I can spare a moment. What do you need?"
         }
     ]
 }
