@@ -5,3 +5,4 @@ openai
 langchain
 langchain-openai
 python-dotenv
+google-genai

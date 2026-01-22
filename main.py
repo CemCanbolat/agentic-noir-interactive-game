@@ -131,6 +131,8 @@ async def get_state():
 
 
 # === 4. STATIC FILES & HTML ===
+app.mount("/static", StaticFiles(directory=os.path.join(base_dir, "static")), name="static")
+
 @app.get("/")
 async def get():
     """Serve the main game HTML from static folder."""
