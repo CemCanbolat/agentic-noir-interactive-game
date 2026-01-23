@@ -116,6 +116,21 @@ async def reset_endpoint():
     return {"status": "reset", "message": "Game has been reset"}
 
 
+@app.get("/settings")
+async def get_settings_endpoint():
+    """Get current game settings."""
+    from utils.settings_manager import load_settings
+    return load_settings()
+
+
+@app.post("/settings")
+async def update_settings_endpoint(settings: dict):
+    """Update game settings."""
+    from utils.settings_manager import save_settings
+    saved = save_settings(settings)
+    return {"status": "success", "settings": saved}
+
+
 @app.get("/state")
 async def get_state():
     """Get current game state (for debugging)."""

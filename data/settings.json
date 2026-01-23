@@ -1,0 +1,4 @@
+{
+  "director_model": "gpt-4o-mini",
+  "narrator_tts_model": "gemini-2.5-flash-preview-tts"
+}
