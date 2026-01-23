@@ -430,6 +430,73 @@
         color: var(--accent-gold);
       }
 
+      /* Switch Styling */
+      .toggle-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: transparent;
+        border: 1px solid #444;
+        padding: 5px 12px;
+        border-radius: 4px;
+        color: var(--text-dim);
+      }
+      
+      .toggle-container:hover {
+        border-color: var(--accent-gold);
+        color: var(--accent-gold);
+      }
+
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 34px;
+        height: 18px;
+      }
+
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #444;
+        transition: .4s;
+        border-radius: 34px;
+      }
+
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 12px;
+        width: 12px;
+        left: 3px;
+        bottom: 3px;
+        background-color: #888;
+        transition: .4s;
+        border-radius: 50%;
+      }
+
+      input:checked + .slider {
+        background-color: var(--accent-gold);
+      }
+
+      input:checked + .slider:before {
+        transform: translateX(16px);
+        background-color: var(--bg-dark);
+      }
+      
+      .toggle-label {
+        font-size: 0.85rem;
+      }
+
       /* Scrollbar styling */
       ::-webkit-scrollbar {
         width: 8px;
@@ -672,14 +739,6 @@
                 <small>Controls the voice generation for NPCs.</small>
             </div>
             
-            <div class="setting-row">
-                <label style="display: flex; align-items: center; gap: 10px;">
-                    <input type="checkbox" id="autoplay-audio" style="width: auto;">
-                    Autoplay Character Voices
-                </label>
-                <small>If enabled, character audio will play automatically in sequence.</small>
-            </div>
-            
             <button class="save-settings-btn" onclick="saveSettings()">Save Configuration</button>
         </div>
       </div>
@@ -716,6 +775,14 @@
         <button class="cmd-btn" onclick="sendCommand('/reset')">
           Reset Game
         </button>
+        
+        <div class="toggle-container" title="Autoplay Character Voices">
+            <span class="toggle-label">Autoplay</span>
+            <label class="switch">
+                <input type="checkbox" id="autoplay-switch" onchange="toggleAutoplaySwitch()">
+                <span class="slider"></span>
+            </label>
+        </div>
       </div>
     </div>
 
@@ -1034,7 +1101,24 @@
       const settingsModal = document.getElementById("settings-modal");
       const directorSelect = document.getElementById("director-model");
       const ttsSelect = document.getElementById("narrator-tts-model");
-      const autoplayCheckbox = document.getElementById("autoplay-audio");
+      const autoplaySwitch = document.getElementById("autoplay-switch");
+
+      // Initialize Switch State
+      initAutoplayState();
+
+      function initAutoplayState() {
+         autoplaySwitch.checked = autoplayEnabled;
+      }
+
+      function toggleAutoplaySwitch() {
+          autoplayEnabled = autoplaySwitch.checked;
+          localStorage.setItem("autoplay_audio", autoplayEnabled);
+          
+          // If turned on and items in queue, start playing
+          if (autoplayEnabled && !isPlayingQueue && audioQueue.length > 0) {
+            processAudioQueue();
+          }
+      }
 
       function openSettings() {
         // Fetch current settings
@@ -1043,10 +1127,6 @@
             .then(data => {
                 directorSelect.value = data.director_model || 'gpt-4o-mini';
                 ttsSelect.value = data.narrator_tts_model || 'gemini-2.5-flash-preview-tts';
-                
-                // Load local preference
-                autoplayCheckbox.checked = autoplayEnabled;
-                
                 settingsModal.style.display = "flex";
             })
             .catch(err => {
@@ -1060,10 +1140,6 @@
       }
 
       function saveSettings() {
-        // Save local preference
-        autoplayEnabled = autoplayCheckbox.checked;
-        localStorage.setItem("autoplay_audio", autoplayEnabled);
-
         const settings = {
             director_model: directorSelect.value,
             narrator_tts_model: ttsSelect.value
