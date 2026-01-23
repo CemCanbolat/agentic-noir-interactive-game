@@ -297,8 +297,7 @@ prompt = ChatPromptTemplate.from_messages([
     ("human", HUMAN_PROMPT)
 ])
 
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.6, timeout=45)
-director_chain = prompt | llm | director_parser
+# llm and director_chain are now initialized inside invoke_director to support dynamic settings
 
 
 # --- Helper Functions ---
@@ -331,6 +330,14 @@ def invoke_director(player_action: str, world_state: dict) -> dict:
     # Get conversation history
     conversation_history = world_state.get('conversation_history', [])[-10:]
     
+    # Get current custom settings
+    from utils.settings_manager import get_setting
+    director_model = get_setting("director_model", "gpt-4o-mini")
+
+    # Build prompt and chain dynamically to allow model switching
+    llm = ChatOpenAI(model=director_model, temperature=0.6, timeout=45)
+    director_chain = prompt | llm | director_parser
+
     # Invoke Director
     decision = director_chain.invoke({
         "solution": json.dumps(solution, indent=2),

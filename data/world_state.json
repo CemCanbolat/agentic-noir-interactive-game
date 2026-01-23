@@ -1,5 +1,5 @@
 {
-    "current_location": "The Silver Gull - main bar",
+    "current_location": "The Silver Gull",
     "discovered_clues": [],
     "interviewed_suspects": [],
     "progress": 0,
@@ -9,8 +9,7 @@
         "Lt. Frank Rourke": "Police Station"
     },
     "visited_locations": [
-        "The Silver Gull",
-        "The Silver Gull - main bar"
+        "The Silver Gull"
     ],
     "known_locations": [
         "The Silver Gull",
@@ -19,18 +18,5 @@
         "Crescent Hotel",
         "Greywater City streets"
     ],
-    "conversation_history": [
-        {
-            "role": "player",
-            "action": "I go and sit to the main bar"
-        },
-        {
-            "role": "player",
-            "action": "I ask bartender for a whiskey"
-        },
-        {
-            "role": "BARTENDER",
-            "dialogue": "Here you go, one whiskey. Enjoy."
-        }
-    ]
+    "conversation_history": []
 }

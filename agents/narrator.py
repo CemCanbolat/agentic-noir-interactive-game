@@ -245,8 +245,12 @@ def process_scene_audio(scene: dict) -> dict:
             tts_prompt = text
             
             # Using google-genai SDK
+            # Get TTS model from settings
+            from utils.settings_manager import get_setting
+            tts_model = get_setting("narrator_tts_model", "gemini-2.5-flash-preview-tts")
+
             response = client.models.generate_content(
-                model='gemini-2.5-flash-preview-tts',
+                model=tts_model,
                 contents=tts_prompt,
                 config={
                     'response_modalities': ['AUDIO'],
