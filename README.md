@@ -63,3 +63,8 @@ This separation ensures the game remains logically consistent (Director) while p
 
 3.  **Play**:
     Open `http://localhost:8000` in your browser.
+
+## Screenshots 📸
+
+![Lobby](screenshots/lobby.png)
+![Investigation](screenshots/investigation.png)
