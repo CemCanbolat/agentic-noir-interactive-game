@@ -430,6 +430,73 @@
         color: var(--accent-gold);
       }
 
+      /* Switch Styling */
+      .toggle-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: transparent;
+        border: 1px solid #444;
+        padding: 5px 12px;
+        border-radius: 4px;
+        color: var(--text-dim);
+      }
+      
+      .toggle-container:hover {
+        border-color: var(--accent-gold);
+        color: var(--accent-gold);
+      }
+
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 34px;
+        height: 18px;
+      }
+
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #444;
+        transition: .4s;
+        border-radius: 34px;
+      }
+
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 12px;
+        width: 12px;
+        left: 3px;
+        bottom: 3px;
+        background-color: #888;
+        transition: .4s;
+        border-radius: 50%;
+      }
+
+      input:checked + .slider {
+        background-color: var(--accent-gold);
+      }
+
+      input:checked + .slider:before {
+        transform: translateX(16px);
+        background-color: var(--bg-dark);
+      }
+      
+      .toggle-label {
+        font-size: 0.85rem;
+      }
+
       /* Scrollbar styling */
       ::-webkit-scrollbar {
         width: 8px;
@@ -708,6 +775,14 @@
         <button class="cmd-btn" onclick="sendCommand('/reset')">
           Reset Game
         </button>
+        
+        <div class="toggle-container" title="Autoplay Character Voices">
+            <span class="toggle-label">Autoplay</span>
+            <label class="switch">
+                <input type="checkbox" id="autoplay-switch" onchange="toggleAutoplaySwitch()">
+                <span class="slider"></span>
+            </label>
+        </div>
       </div>
     </div>
 
@@ -778,22 +853,36 @@
           case "scene":
             data.data.forEach((line) => {
               let audioHtml = "";
+              let safeUrl = "";
               if (line.audio_url) {
                 // Use a proper onclick handler that calls our global function
                 // Escaping the URL just in case
-                const safeUrl = line.audio_url.replace(/"/g, "&quot;");
+                safeUrl = line.audio_url.replace(/"/g, "&quot;");
                 audioHtml = `<button class="play-audio-btn" onclick="playAudio('${safeUrl}', this)">▶</button>`;
               }
 
+              let entry;
               if (line.speaker === "NARRATOR") {
-                addLogEntry("narrator", line.text);
+                entry = addLogEntry("narrator", line.text);
               } else {
-                addLogEntry(
+                entry = addLogEntry(
                   "npc",
                   `${audioHtml}<span class="speaker">${line.speaker}:</span> "${line.text}"`,
                 );
               }
+              
+              // Auto-queue
+              if (autoplayEnabled && line.audio_url && entry) {
+                 const btn = entry.querySelector(".play-audio-btn");
+                 if (btn) {
+                     audioQueue.push({ url: line.audio_url, btn: btn });
+                 }
+              }
             });
+            
+            if (autoplayEnabled && !isPlayingQueue && audioQueue.length > 0) {
+                processAudioQueue();
+            }
             break;
 
           case "processing":
@@ -805,8 +894,13 @@
       // === AUDIO HANDLER ===
       let currentAudio = null;
       let currentBtn = null;
+      let audioQueue = [];
+      let isPlayingQueue = false;
 
-      function playAudio(url, btn) {
+      // Load preference
+      let autoplayEnabled = localStorage.getItem("autoplay_audio") === "true";
+
+      function playAudio(url, btn, isAuto = false) {
         // Stop current if playing
         if (currentAudio) {
           currentAudio.pause();
@@ -817,10 +911,12 @@
           }
         }
 
-        // If clicking same button, just stop
-        if (currentBtn === btn && !currentAudio.paused) {
+        // If clicking same button manually, just stop
+        if (!isAuto && currentBtn === btn && currentAudio && !currentAudio.paused) {
           currentAudio = null;
           currentBtn = null;
+          isPlayingQueue = false;
+          audioQueue = []; // Clear queue on manual stop
           return;
         }
 
@@ -828,21 +924,44 @@
         currentAudio = audio;
         currentBtn = btn;
 
-        btn.classList.add("playing");
-        btn.innerHTML = "■"; // Stop icon or just keeping visual state
+        if (btn) {
+            btn.classList.add("playing");
+            btn.innerHTML = "■";
+        }
 
         audio.onended = () => {
-          btn.classList.remove("playing");
-          btn.innerHTML = "▶";
+          if (btn) {
+              btn.classList.remove("playing");
+              btn.innerHTML = "▶";
+          }
           currentAudio = null;
           currentBtn = null;
+          
+          if (isAuto) {
+              processAudioQueue();
+          }
         };
 
         audio.play().catch((e) => {
           console.error("Audio playback error:", e);
-          btn.classList.remove("playing");
-          btn.innerHTML = "⚠️";
+          if (btn) {
+              btn.classList.remove("playing");
+              btn.innerHTML = "⚠️";
+          }
+          // If failed, try next
+          if (isAuto) processAudioQueue();
         });
+      }
+
+      function processAudioQueue() {
+        if (audioQueue.length === 0) {
+            isPlayingQueue = false;
+            return;
+        }
+
+        isPlayingQueue = true;
+        const nextItem = audioQueue.shift();
+        playAudio(nextItem.url, nextItem.btn, true);
       }
 
       // === LOBBY FUNCTIONS ===
@@ -924,6 +1043,7 @@
         entry.innerHTML = content;
         gameLog.appendChild(entry);
         gameLog.scrollTop = gameLog.scrollHeight;
+        return entry;
       }
 
       function setProcessingState(isProcessing) {
@@ -981,6 +1101,24 @@
       const settingsModal = document.getElementById("settings-modal");
       const directorSelect = document.getElementById("director-model");
       const ttsSelect = document.getElementById("narrator-tts-model");
+      const autoplaySwitch = document.getElementById("autoplay-switch");
+
+      // Initialize Switch State
+      initAutoplayState();
+
+      function initAutoplayState() {
+         autoplaySwitch.checked = autoplayEnabled;
+      }
+
+      function toggleAutoplaySwitch() {
+          autoplayEnabled = autoplaySwitch.checked;
+          localStorage.setItem("autoplay_audio", autoplayEnabled);
+          
+          // If turned on and items in queue, start playing
+          if (autoplayEnabled && !isPlayingQueue && audioQueue.length > 0) {
+            processAudioQueue();
+          }
+      }
 
       function openSettings() {
         // Fetch current settings
