@@ -121,8 +121,7 @@ prompt = ChatPromptTemplate.from_messages([
     ("human", HUMAN_PROMPT)
 ])
 
-# Use PydanticOutputParser if needed, but JsonOutputParser is simpler for direct dictionary usage
-# However, modifying the wrapper to ensure persistence
+
 narrator_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.8, timeout=30)
 narrator_chain = prompt | narrator_llm | narrator_parser
 
@@ -161,7 +160,6 @@ def invoke_narrator(director_event: dict) -> dict:
     })
     
     # 3. Post-Process for Audio (TTS)
-    # We do this here so the 'scene' object returned to the game loop is fully populated with audio URLs
     final_scene = process_scene_audio(result)
     
     return final_scene
@@ -240,12 +238,8 @@ def process_scene_audio(scene: dict) -> dict:
 
         # Generate Audio
         try:
-            # Using speech_config for voice selection (Standard Gemini API pattern)
-            # Prompt can now be just the text
             tts_prompt = text
             
-            # Using google-genai SDK
-            # Get TTS model from settings
             from utils.settings_manager import get_setting
             tts_model = get_setting("narrator_tts_model", "gemini-2.5-flash-preview-tts")
 
@@ -264,11 +258,6 @@ def process_scene_audio(scene: dict) -> dict:
                 }
             )
             
-            # For TTS, the response usually contains binary data in specific field?
-            # Or response.bytes? 
-            # In the new SDK `response.candidates[0].content.parts[0].inline_data.data` is usually bytes.
-            # But recent SDK changes might make it `response.text` impossible.
-            # Let's try standard part access.
             
             audio_bytes = None
             if response.candidates and response.candidates[0].content.parts:
@@ -323,47 +312,3 @@ def speak_scene(scene: dict) -> None:
     
     print("--- END SCENE ---\n")
 
-
-# --- Standalone testing ---
-if __name__ == "__main__":
-    # Test events
-    test_events = [
-        {
-            "event_type": "location_reveal",
-            "description": "Players enter a dimly lit bar with a piano in the corner",
-            "items_visible": ["bar counter", "dusty piano", "half-empty whiskey bottles"],
-            "npcs_present": ["tired bartender"],
-            "dialogue": None,
-            "npc_emotion": None,
-            "block_reason": None
-        },
-        {
-            "event_type": "action_blocked",
-            "description": "Player tried to take the piano",
-            "items_visible": [],
-            "npcs_present": [],
-            "dialogue": None,
-            "npc_emotion": None,
-            "block_reason": "The piano weighs several hundred pounds and is bolted to the stage"
-        },
-        {
-            "event_type": "npc_dialogue",
-            "description": "Bartender responds to question about the victim",
-            "items_visible": [],
-            "npcs_present": ["Bartender"],
-            "dialogue": "Iris? Yeah, she sang here. Beautiful voice. Shame about what happened. But I don't know nothing else, detective.",
-            "npc_emotion": "nervous, evasive",
-            "block_reason": None
-        }
-    ]
-    
-    for i, event in enumerate(test_events):
-        print(f"\n{'='*50}")
-        print(f"TEST {i+1}: {event['event_type']}")
-        print('='*50)
-        
-        try:
-            scene = invoke_narrator(event)
-            speak_scene(scene)
-        except Exception as e:
-            print(f"Error: {e}")

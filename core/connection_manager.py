@@ -1,10 +1,7 @@
 import json
 import uuid
-import asyncio
 from typing import List, Dict
 from fastapi import WebSocket
-from core import game_state
-from utils import memory_manager
 
 class ConnectionManager:
     def __init__(self):

@@ -400,35 +400,3 @@ def _save_generated_content(decision: dict, location: str) -> None:
     for item_id in decision.get('items_taken', []):
         memory_manager.transfer_item_to_inventory(item_id)
 
-
-# --- Standalone testing ---
-if __name__ == "__main__":
-    # Simple test
-    test_state = {
-        "current_location": "The Silver Gull - main bar",
-        "discovered_clues": [],
-        "interviewed_suspects": [],
-        "conversation_history": [],
-        "progress": 0
-    }
-    
-    while True:
-        action = input("Player action: ")
-        if action.lower() == 'quit':
-            break
-        
-        try:
-            result = invoke_director(action, test_state)
-            print("\n--- Director Decision ---")
-            print(f"Event: {result['narrator_event']}")
-            print(f"Interactables: {result['interactables']}")
-            if result.get('generated_items'):
-                print(f"Generated Items: {[i['name'] for i in result['generated_items']]}")
-            print("-------------------------\n")
-            
-            # Update test state
-            test_state['current_location'] = result['new_location']
-        except Exception as e:
-            print(f"Error: {e}")
-            import traceback
-            traceback.print_exc()
