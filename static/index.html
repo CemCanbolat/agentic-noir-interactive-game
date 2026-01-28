@@ -275,6 +275,108 @@
         font-size: 0.9rem;
       }
 
+      /* Ready Button */
+      .ready-btn {
+        width: 100%;
+        padding: 12px;
+        background: transparent;
+        color: var(--text-dim);
+        border: 2px solid #444;
+        border-radius: 4px;
+        font-family: inherit;
+        font-size: 1rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-bottom: 15px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .ready-btn:hover:not(:disabled) {
+        border-color: var(--accent-gold);
+        color: var(--accent-gold);
+      }
+
+      .ready-btn.is-ready {
+        background: var(--accent-gold);
+        color: var(--bg-dark);
+        border-color: var(--accent-gold);
+      }
+
+      .ready-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      /* Player ready status */
+      .player-ready-status {
+        margin-left: auto;
+        font-size: 0.8rem;
+        padding: 3px 8px;
+        border-radius: 3px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .player-ready-status.ready {
+        color: var(--player-green);
+      }
+
+      .player-ready-status.not-ready {
+        color: var(--text-dim);
+      }
+
+      /* Countdown Overlay */
+      .countdown-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+      }
+
+      .countdown-overlay.active {
+        display: flex;
+      }
+
+      .countdown-number {
+        font-family: "Special Elite", cursive;
+        font-size: 15rem;
+        color: var(--accent-gold);
+        text-shadow: 0 0 50px rgba(212, 168, 67, 0.5);
+        animation: countdownPulse 1s ease-in-out;
+      }
+
+      .countdown-text {
+        font-size: 1.5rem;
+        color: var(--text-dim);
+        margin-top: 20px;
+        text-transform: uppercase;
+        letter-spacing: 3px;
+      }
+
+      @keyframes countdownPulse {
+        0% {
+          transform: scale(1.5);
+          opacity: 0;
+        }
+        50% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        100% {
+          transform: scale(0.9);
+          opacity: 0.8;
+        }
+      }
+
       /* === GAME SCREEN === */
       #game-screen {
         display: none;
@@ -713,12 +815,21 @@
           </div>
         </div>
 
+        <button class="ready-btn" id="ready-btn" disabled>
+          Ready Up
+        </button>
         <button class="start-btn" id="start-btn" disabled>
           Begin Investigation
         </button>
         <p class="waiting-text" id="waiting-text">
-          Waiting for at least 1 player to join...
+          Enter your name to join the lobby...
         </p>
+      </div>
+
+      <!-- COUNTDOWN OVERLAY -->
+      <div class="countdown-overlay" id="countdown-overlay">
+        <div class="countdown-number" id="countdown-number">3</div>
+        <div class="countdown-text">Investigation starting...</div>
       </div>
 
       <!-- SETTINGS MODAL -->
@@ -815,6 +926,7 @@
             <span class="slider"></span>
           </label>
         </div>
+        
       </div>
     </div>
 
@@ -823,26 +935,47 @@
       let ws = null;
       let myID = null;
       let myNickname = null;
+      let myReady = false;
       let gameStarted = false;
       let players = {};
 
       // === DOM ELEMENTS ===
       const lobbyScreen = document.getElementById("lobby-screen");
+
+      // === RESET CHECK ===
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has('reset') || urlParams.has('new')) {
+          localStorage.removeItem("agentic_player_id");
+          console.log("Session cleared via URL parameter.");
+          // Clean URL without reload
+          window.history.replaceState({}, document.title, "/");
+      }
       const gameScreen = document.getElementById("game-screen");
       const nicknameInput = document.getElementById("nickname-input");
       const setNicknameBtn = document.getElementById("set-nickname-btn");
       const nicknameSection = document.getElementById("nickname-section");
       const playerList = document.getElementById("player-list");
+      const readyBtn = document.getElementById("ready-btn");
       const startBtn = document.getElementById("start-btn");
       const waitingText = document.getElementById("waiting-text");
       const gameLog = document.getElementById("game-log");
       const actionInput = document.getElementById("action-input");
       const sendBtn = document.getElementById("send-btn");
       const onlineCount = document.getElementById("online-count");
+      const countdownOverlay = document.getElementById("countdown-overlay");
+      const countdownNumber = document.getElementById("countdown-number");
 
       // === WEBSOCKET CONNECTION ===
       function connect() {
-        ws = new WebSocket("ws://" + window.location.host + "/ws");
+        // Check for existing ID
+        const storedID = localStorage.getItem("agentic_player_id");
+        let url = "ws://" + window.location.host + "/ws";
+        if (storedID) {
+            url += "?player_id=" + storedID;
+            console.log("Attempting to restore session:", storedID);
+        }
+
+        ws = new WebSocket(url);
 
         ws.onopen = () => {
           console.log("Connected to server");
@@ -864,14 +997,33 @@
         switch (data.type) {
           case "assign_id":
             myID = data.player_id;
+            localStorage.setItem("agentic_player_id", myID);
             break;
 
           case "player_list":
             updatePlayerList(data.players);
+            // Auto-detect my nickname if restored
+            if (players[myID] && players[myID].nickname) {
+                myNickname = players[myID].nickname;
+                // If I have a nickname and I'm in lobby, update UI state
+                if (!gameStarted) {
+                     nicknameInput.value = myNickname;
+                     nicknameInput.disabled = true;
+                     setNicknameBtn.disabled = true;
+                     setNicknameBtn.textContent = "Joined!";
+                     // Enable ready button for restored sessions
+                     readyBtn.disabled = false;
+                }
+            }
             break;
 
           case "game_started":
+            countdownOverlay.classList.remove("active");
             startGame(data);
+            break;
+
+          case "countdown":
+            showCountdown(data.count);
             break;
 
           case "system":
@@ -1014,28 +1166,65 @@
             .map(([id, info]) => {
               const isYou = id === myID;
               const name = info.nickname || `Detective-${id.slice(-3)}`;
+              const hasNickname = !!info.nickname;
+              const isReady = info.ready;
+              
+              // Update local state if this is us
+              if (isYou && hasNickname) {
+                myReady = isReady;
+                updateReadyButton();
+              }
+              
+              let readyStatus = '';
+              if (hasNickname) {
+                readyStatus = isReady 
+                  ? '<span class="player-ready-status ready">✓ READY</span>'
+                  : '<span class="player-ready-status not-ready">• WAITING</span>';
+              }
+              
               return `<li class="${isYou ? "you" : ""}">
                         <span class="player-badge"></span>
                         ${escapeHtml(name)} ${isYou ? "(you)" : ""}
+                        ${readyStatus}
                     </li>`;
             })
             .join("");
         }
 
-        // Update start button state
-        const readyCount = Object.values(players).filter(
-          (p) => p.nickname,
-        ).length;
-        if (readyCount >= 1 && myNickname) {
+        // Check ready status - all named players must be ready
+        const playersWithNames = Object.values(players).filter(p => p.nickname);
+        const readyCount = playersWithNames.filter(p => p.ready).length;
+        const totalWithNames = playersWithNames.length;
+        const allReady = totalWithNames > 0 && readyCount === totalWithNames;
+        
+        // Update start button state - only enabled if all players are ready
+        if (allReady && myNickname && myReady) {
           startBtn.disabled = false;
-          waitingText.textContent = `${readyCount} detective${readyCount > 1 ? "s" : ""} ready. Anyone can start the game.`;
+          waitingText.textContent = `All ${totalWithNames} detective${totalWithNames > 1 ? "s" : ""} ready! Anyone can start the investigation.`;
+        } else if (myNickname) {
+          startBtn.disabled = true;
+          if (totalWithNames > 0) {
+            waitingText.textContent = `Waiting for all detectives to ready up (${readyCount}/${totalWithNames})`;
+          } else {
+            waitingText.textContent = "Click 'Ready Up' when you're prepared.";
+          }
         } else {
           startBtn.disabled = true;
-          waitingText.textContent = "Enter your name to join...";
+          waitingText.textContent = "Enter your name to join the lobby...";
         }
 
         // Update online count in game
         onlineCount.textContent = `${count} detective${count !== 1 ? "s" : ""}`;
+      }
+
+      function updateReadyButton() {
+        if (myReady) {
+          readyBtn.classList.add("is-ready");
+          readyBtn.innerHTML = "Ready!";
+        } else {
+          readyBtn.classList.remove("is-ready");
+          readyBtn.innerHTML = "Ready Up";
+        }
       }
 
       function setNickname() {
@@ -1048,7 +1237,25 @@
           nicknameInput.disabled = true;
           setNicknameBtn.disabled = true;
           setNicknameBtn.textContent = "Joined!";
+          
+          // Enable ready button
+          readyBtn.disabled = false;
         }
+      }
+
+      function toggleReady() {
+        if (ws && myNickname) {
+          ws.send(JSON.stringify({ type: "toggle_ready" }));
+        }
+      }
+
+      function showCountdown(count) {
+        countdownOverlay.classList.add("active");
+        countdownNumber.textContent = count;
+        // Re-trigger animation
+        countdownNumber.style.animation = 'none';
+        countdownNumber.offsetHeight; // Trigger reflow
+        countdownNumber.style.animation = 'countdownPulse 1s ease-in-out';
       }
 
       function requestStartGame() {
@@ -1070,6 +1277,9 @@
         // Add intro message
         if (data.intro) {
           addLogEntry("system", data.intro);
+        } else if (!gameLog.hasChildNodes()) {
+             // Fallback if empty log on reconnect (though scene data usually follows)
+             addLogEntry("system", "Resuming investigation...");
         }
 
         // PLAY INTRO AUDIO IF ENABLED
@@ -1122,6 +1332,8 @@
         }
       }
 
+
+
       function escapeHtml(text) {
         const div = document.createElement("div");
         div.textContent = text;
@@ -1134,6 +1346,7 @@
         if (e.key === "Enter") setNickname();
       });
 
+      readyBtn.addEventListener("click", toggleReady);
       startBtn.addEventListener("click", requestStartGame);
 
       sendBtn.addEventListener("click", sendAction);

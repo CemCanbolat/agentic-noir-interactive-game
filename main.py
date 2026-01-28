@@ -28,8 +28,15 @@ app = FastAPI(title="Agentic Noir")
 
 # === 2. WEBSOCKET ENDPOINT ===
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    player_id = await manager.connect(websocket)
+async def websocket_endpoint(websocket: WebSocket, player_id: str = None):
+    # Pass player_id to connect (will restore if matches inactive/active)
+    real_player_id = await manager.connect(websocket, player_id)
+    
+    # If game is already in progress, sync the state for this player
+    if not game_state.in_lobby:
+         print(f"Syncing state for player {real_player_id}...")
+         await manager.send_game_state(real_player_id)
+
     try:
         while True:
             data = await websocket.receive_text()
@@ -37,11 +44,28 @@ async def websocket_endpoint(websocket: WebSocket):
             
             # Handle nickname setting (lobby)
             if payload["type"] == "nickname":
-                await manager.set_nickname(player_id, payload["nickname"])
+                await manager.set_nickname(real_player_id, payload["nickname"])
+            
+            # Handle ready toggle
+            elif payload["type"] == "toggle_ready":
+                if game_state.in_lobby:
+                    await manager.toggle_ready(real_player_id)
             
             # Handle game start request
             elif payload["type"] == "start_game":
                 if game_state.in_lobby:
+                    # Check if all players are ready
+                    all_ready, ready_count, total = manager.check_all_ready()
+                    if not all_ready:
+                        await manager.broadcast_system(f"[WAIT] Not all detectives are ready! ({ready_count}/{total})")
+                        continue
+                    
+                    # Perform countdown
+                    for count in [3, 2, 1]:
+                        await manager.broadcast_countdown(count)
+                        await asyncio.sleep(1)
+                    
+                    # Start the game
                     case_id = payload.get("case", "iris_bell")
                     game_state.start_game(case_id)
                     await manager.broadcast_game_start(case_id)
@@ -53,7 +77,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     continue  # Ignore chat in lobby
                 
                 player_action = payload["text"]
-                await manager.broadcast(player_id, player_action)
+                await manager.broadcast(real_player_id, player_action)
                 
                 # Special commands
                 if player_action.lower() == "/inventory":
@@ -74,6 +98,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 
                 if player_action.lower() == "/lobby":
                     game_state.reset_to_lobby()
+                    await manager.reset_all_ready()
                     await manager.broadcast_system("[LOBBY] Returning to lobby...")
                     continue
                 
@@ -99,12 +124,12 @@ async def websocket_endpoint(websocket: WebSocket):
                     await manager.broadcast_processing(False)
 
     except WebSocketDisconnect:
-        await manager.disconnect(player_id)
+        await manager.disconnect(real_player_id, websocket)
     except Exception as e:
         print(f"WebSocket error: {e}")
         import traceback
         traceback.print_exc()
-        await manager.disconnect(player_id)
+        await manager.disconnect(real_player_id, websocket)
 
 
 # === 3. REST ENDPOINTS ===
