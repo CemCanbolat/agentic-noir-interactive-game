@@ -68,15 +68,27 @@ class ConnectionManager:
 
     async def broadcast_game_start(self, case_id: str):
         """Notify all players that the game has started."""
-        intro_messages = {
-            "iris_bell": "The rain hammers against your fedora as you push through the doors of The Silver Gull. A torch singer lies dead in her dressing room. Three suspects, one truth. Time to work."
-        }
-        intro = intro_messages.get(case_id, "The case begins...")
+        # Load intro from file if available
+        intro_text = "The case begins..."
+        import os
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        intro_path = os.path.join(base_dir, "scripts", "intro_story.txt")
+        
+        if os.path.exists(intro_path):
+            with open(intro_path, "r", encoding="utf-8") as f:
+                intro_text = f.read().strip()
+        else:
+             intro_messages = {
+                "iris_bell": "The rain hammers against your fedora as you push through the doors of The Silver Gull. A torch singer lies dead in her dressing room. Three suspects, one truth. Time to work."
+            }
+             intro_text = intro_messages.get(case_id, "The case begins...")
+
         
         message = json.dumps({
             "type": "game_started",
             "case": case_id,
-            "intro": intro
+            "intro": intro_text,
+            "intro_audio_url": "/static/audio/intro.wav"
         })
         for info in self.players.values():
             try:
