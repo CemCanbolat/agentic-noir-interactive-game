@@ -13,7 +13,6 @@ from langchain_openai import ChatOpenAI
 from dotenv import load_dotenv
 from google import genai
 import uuid
-import pathlib
 
 # Load environment
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -232,7 +231,7 @@ def process_scene_audio(scene: dict) -> dict:
                 print(f"[TTS] New voice assigned: {speaker} -> {voice_name}")
             else:
                 # Fallback if no suggestion
-                voice_name = "Algenib" # Default fallback (Gravelly, Male)
+                voice_name = "Schedar" # Default fallback (Even, Male)
         
 
 
