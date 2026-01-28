@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Agentic Noir - Film Noir Detective Game</title>
+    <link rel="icon" type="image/png" href="/static/favicon.png" />
     <link
       href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:wght@400;700&display=swap"
       rel="stylesheet"
@@ -441,7 +442,7 @@
         border-radius: 4px;
         color: var(--text-dim);
       }
-      
+
       .toggle-container:hover {
         border-color: var(--accent-gold);
         color: var(--accent-gold);
@@ -468,7 +469,7 @@
         right: 0;
         bottom: 0;
         background-color: #444;
-        transition: .4s;
+        transition: 0.4s;
         border-radius: 34px;
       }
 
@@ -480,7 +481,7 @@
         left: 3px;
         bottom: 3px;
         background-color: #888;
-        transition: .4s;
+        transition: 0.4s;
         border-radius: 50%;
       }
 
@@ -492,7 +493,7 @@
         transform: translateX(16px);
         background-color: var(--bg-dark);
       }
-      
+
       .toggle-label {
         font-size: 0.85rem;
       }
@@ -667,9 +668,16 @@
       <p class="tagline">A Collaborative Detective Experience</p>
 
       <div class="lobby-card">
-        <button class="settings-icon-btn" onclick="openSettings()" title="Game Settings" aria-label="Settings">
+        <button
+          class="settings-icon-btn"
+          onclick="openSettings()"
+          title="Game Settings"
+          aria-label="Settings"
+        >
           <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
+            <path
+              d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"
+            />
           </svg>
         </button>
 
@@ -716,30 +724,50 @@
       <!-- SETTINGS MODAL -->
       <div id="settings-modal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h2>Game Configuration</h2>
-                <button class="close-btn" onclick="closeSettings()">&times;</button>
+          <div class="modal-header">
+            <h2>Game Configuration</h2>
+            <button class="close-btn" onclick="closeSettings()">&times;</button>
+          </div>
+
+          <div class="setting-row">
+            <label for="director-model">Director AI Model (Game Logic)</label>
+            <select id="director-model">
+              <option value="gpt-4o-mini">GPT-4o Mini (Fast)</option>
+              <option value="gpt-4o">GPT-4o (Smart)</option>
+            </select>
+            <small>Controls the game logic and world simulation.</small>
+          </div>
+
+          <div class="setting-row">
+            <label for="narrator-tts-model">Narrator Voice Model (TTS)</label>
+            <select id="narrator-tts-model">
+              <option value="gemini-2.5-flash-preview-tts">
+                Gemini 2.5 Flash TTS (Default)
+              </option>
+              <option value="gemini-2.5-pro-preview-tts">
+                Gemini 2.5 Pro TTS (High Quality)
+              </option>
+            </select>
+            <small>Controls the voice generation for NPCs.</small>
+          </div>
+
+          <div class="setting-row">
+            <label for="setting-intro-audio">Intro Audio</label>
+            <div class="toggle-container" style="justify-content: space-between; background: var(--bg-dark); padding: 10px; border: 1px solid #444;">
+                <span style="font-size: 0.9rem; color: var(--text-primary);">Play Cinematic Intro</span>
+                <label class="switch">
+                    <input type="checkbox" id="setting-intro-audio" checked>
+                    <span class="slider"></span>
+                </label>
             </div>
-            
-            <div class="setting-row">
-                <label for="director-model">Director AI Model (Game Logic)</label>
-                <select id="director-model">
-                    <option value="gpt-4o-mini">GPT-4o Mini (Fast)</option>
-                    <option value="gpt-4o">GPT-4o (Smart)</option>
-                </select>
-                <small>Controls the game logic and world simulation.</small>
-            </div>
-            
-            <div class="setting-row">
-                <label for="narrator-tts-model">Narrator Voice Model (TTS)</label>
-                <select id="narrator-tts-model">
-                    <option value="gemini-2.5-flash-preview-tts">Gemini 2.5 Flash TTS (Default)</option>
-                    <option value="gemini-2.5-pro-preview-tts">Gemini 2.5 Pro TTS (High Quality)</option>
-                </select>
-                <small>Controls the voice generation for NPCs.</small>
-            </div>
-            
-            <button class="save-settings-btn" onclick="saveSettings()">Save Configuration</button>
+            <small>If enabled, plays the noir intro narration when the game starts.</small>
+          </div>
+
+
+
+          <button class="save-settings-btn" onclick="saveSettings()">
+            Save Configuration
+          </button>
         </div>
       </div>
     </div>
@@ -775,13 +803,17 @@
         <button class="cmd-btn" onclick="sendCommand('/reset')">
           Reset Game
         </button>
-        
+
         <div class="toggle-container" title="Autoplay Character Voices">
-            <span class="toggle-label">Autoplay</span>
-            <label class="switch">
-                <input type="checkbox" id="autoplay-switch" onchange="toggleAutoplaySwitch()">
-                <span class="slider"></span>
-            </label>
+          <span class="toggle-label">Autoplay</span>
+          <label class="switch">
+            <input
+              type="checkbox"
+              id="autoplay-switch"
+              onchange="toggleAutoplaySwitch()"
+            />
+            <span class="slider"></span>
+          </label>
         </div>
       </div>
     </div>
@@ -870,18 +902,18 @@
                   `${audioHtml}<span class="speaker">${line.speaker}:</span> "${line.text}"`,
                 );
               }
-              
+
               // Auto-queue
               if (autoplayEnabled && line.audio_url && entry) {
-                 const btn = entry.querySelector(".play-audio-btn");
-                 if (btn) {
-                     audioQueue.push({ url: line.audio_url, btn: btn });
-                 }
+                const btn = entry.querySelector(".play-audio-btn");
+                if (btn) {
+                  audioQueue.push({ url: line.audio_url, btn: btn });
+                }
               }
             });
-            
+
             if (autoplayEnabled && !isPlayingQueue && audioQueue.length > 0) {
-                processAudioQueue();
+              processAudioQueue();
             }
             break;
 
@@ -912,7 +944,12 @@
         }
 
         // If clicking same button manually, just stop
-        if (!isAuto && currentBtn === btn && currentAudio && !currentAudio.paused) {
+        if (
+          !isAuto &&
+          currentBtn === btn &&
+          currentAudio &&
+          !currentAudio.paused
+        ) {
           currentAudio = null;
           currentBtn = null;
           isPlayingQueue = false;
@@ -925,28 +962,28 @@
         currentBtn = btn;
 
         if (btn) {
-            btn.classList.add("playing");
-            btn.innerHTML = "■";
+          btn.classList.add("playing");
+          btn.innerHTML = "■";
         }
 
         audio.onended = () => {
           if (btn) {
-              btn.classList.remove("playing");
-              btn.innerHTML = "▶";
+            btn.classList.remove("playing");
+            btn.innerHTML = "▶";
           }
           currentAudio = null;
           currentBtn = null;
-          
+
           if (isAuto) {
-              processAudioQueue();
+            processAudioQueue();
           }
         };
 
         audio.play().catch((e) => {
           console.error("Audio playback error:", e);
           if (btn) {
-              btn.classList.remove("playing");
-              btn.innerHTML = "⚠️";
+            btn.classList.remove("playing");
+            btn.innerHTML = "⚠️";
           }
           // If failed, try next
           if (isAuto) processAudioQueue();
@@ -955,8 +992,8 @@
 
       function processAudioQueue() {
         if (audioQueue.length === 0) {
-            isPlayingQueue = false;
-            return;
+          isPlayingQueue = false;
+          return;
         }
 
         isPlayingQueue = true;
@@ -1034,6 +1071,13 @@
         if (data.intro) {
           addLogEntry("system", data.intro);
         }
+
+        // PLAY INTRO AUDIO IF ENABLED
+        const playIntro = document.getElementById("setting-intro-audio").checked;
+        if (playIntro && data.intro_audio_url) {
+            const audio = new Audio(data.intro_audio_url);
+            audio.play().catch(e => console.error("Intro audio playback failed:", e));
+        }
       }
 
       // === GAME FUNCTIONS ===
@@ -1107,32 +1151,33 @@
       initAutoplayState();
 
       function initAutoplayState() {
-         autoplaySwitch.checked = autoplayEnabled;
+        autoplaySwitch.checked = autoplayEnabled;
       }
 
       function toggleAutoplaySwitch() {
-          autoplayEnabled = autoplaySwitch.checked;
-          localStorage.setItem("autoplay_audio", autoplayEnabled);
-          
-          // If turned on and items in queue, start playing
-          if (autoplayEnabled && !isPlayingQueue && audioQueue.length > 0) {
-            processAudioQueue();
-          }
+        autoplayEnabled = autoplaySwitch.checked;
+        localStorage.setItem("autoplay_audio", autoplayEnabled);
+
+        // If turned on and items in queue, start playing
+        if (autoplayEnabled && !isPlayingQueue && audioQueue.length > 0) {
+          processAudioQueue();
+        }
       }
 
       function openSettings() {
         // Fetch current settings
-        fetch('/settings')
-            .then(res => res.json())
-            .then(data => {
-                directorSelect.value = data.director_model || 'gpt-4o-mini';
-                ttsSelect.value = data.narrator_tts_model || 'gemini-2.5-flash-preview-tts';
-                settingsModal.style.display = "flex";
-            })
-            .catch(err => {
-                console.error("Error loading settings:", err);
-                alert("Failed to load settings.");
-            });
+        fetch("/settings")
+          .then((res) => res.json())
+          .then((data) => {
+            directorSelect.value = data.director_model || "gpt-4o-mini";
+            ttsSelect.value =
+              data.narrator_tts_model || "gemini-2.5-flash-preview-tts";
+            settingsModal.style.display = "flex";
+          })
+          .catch((err) => {
+            console.error("Error loading settings:", err);
+            alert("Failed to load settings.");
+          });
       }
 
       function closeSettings() {
@@ -1141,38 +1186,38 @@
 
       function saveSettings() {
         const settings = {
-            director_model: directorSelect.value,
-            narrator_tts_model: ttsSelect.value
+          director_model: directorSelect.value,
+          narrator_tts_model: ttsSelect.value,
         };
 
-        fetch('/settings', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(settings)
+        fetch("/settings", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(settings),
         })
-        .then(res => res.json())
-        .then(data => {
-            if (data.status === 'success') {
-                alert("Settings saved!");
-                closeSettings();
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.status === "success") {
+              alert("Settings saved!");
+              closeSettings();
             } else {
-                alert("Error saving settings.");
+              alert("Error saving settings.");
             }
-        })
-        .catch(err => {
+          })
+          .catch((err) => {
             console.error(err);
             alert("Error saving settings.");
-        });
+          });
       }
 
       // Close modal when clicking outside
-      window.onclick = function(event) {
+      window.onclick = function (event) {
         if (event.target == settingsModal) {
-            closeSettings();
+          closeSettings();
         }
-      }
+      };
 
       // === INIT ===
       connect();

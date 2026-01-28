@@ -42,10 +42,14 @@ def reset_game():
     try:
         files = glob.glob(os.path.join(audio_dir, "*"))
         for f in files:
+            # Skip the intro file
+            if os.path.basename(f) == "intro.wav":
+                continue
+                
             try:
                 os.remove(f)
             except OSError as e:
                 print(f"Error deleting {f}: {e}")
-        print("Audio cache cleared.")
+        print("Audio cache cleared (preserved intro.wav).")
     except Exception as e:
         print(f"Failed to clear audio cache: {e}")
