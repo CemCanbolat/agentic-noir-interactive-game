@@ -815,6 +815,7 @@
             <span class="slider"></span>
           </label>
         </div>
+        
       </div>
     </div>
 
@@ -828,6 +829,15 @@
 
       // === DOM ELEMENTS ===
       const lobbyScreen = document.getElementById("lobby-screen");
+
+      // === RESET CHECK ===
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has('reset') || urlParams.has('new')) {
+          localStorage.removeItem("agentic_player_id");
+          console.log("Session cleared via URL parameter.");
+          // Clean URL without reload
+          window.history.replaceState({}, document.title, "/");
+      }
       const gameScreen = document.getElementById("game-screen");
       const nicknameInput = document.getElementById("nickname-input");
       const setNicknameBtn = document.getElementById("set-nickname-btn");
@@ -842,7 +852,15 @@
 
       // === WEBSOCKET CONNECTION ===
       function connect() {
-        ws = new WebSocket("ws://" + window.location.host + "/ws");
+        // Check for existing ID
+        const storedID = localStorage.getItem("agentic_player_id");
+        let url = "ws://" + window.location.host + "/ws";
+        if (storedID) {
+            url += "?player_id=" + storedID;
+            console.log("Attempting to restore session:", storedID);
+        }
+
+        ws = new WebSocket(url);
 
         ws.onopen = () => {
           console.log("Connected to server");
@@ -864,10 +882,22 @@
         switch (data.type) {
           case "assign_id":
             myID = data.player_id;
+            localStorage.setItem("agentic_player_id", myID);
             break;
 
           case "player_list":
             updatePlayerList(data.players);
+            // Auto-detect my nickname if restored
+            if (players[myID] && players[myID].nickname) {
+                myNickname = players[myID].nickname;
+                // If I have a nickname and I'm in lobby, update UI state
+                if (!gameStarted) {
+                     nicknameInput.value = myNickname;
+                     nicknameInput.disabled = true;
+                     setNicknameBtn.disabled = true;
+                     setNicknameBtn.textContent = "Joined!";
+                }
+            }
             break;
 
           case "game_started":
@@ -1070,6 +1100,9 @@
         // Add intro message
         if (data.intro) {
           addLogEntry("system", data.intro);
+        } else if (!gameLog.hasChildNodes()) {
+             // Fallback if empty log on reconnect (though scene data usually follows)
+             addLogEntry("system", "Resuming investigation...");
         }
 
         // PLAY INTRO AUDIO IF ENABLED
@@ -1121,6 +1154,8 @@
           ws.send(JSON.stringify({ type: "chat", text: cmd }));
         }
       }
+
+
 
       function escapeHtml(text) {
         const div = document.createElement("div");

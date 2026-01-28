@@ -6,19 +6,51 @@ from fastapi import WebSocket
 class ConnectionManager:
     def __init__(self):
         self.players: Dict[str, Dict] = {}
+        self.inactive_players: Dict[str, Dict] = {}  # Store disconnected player info
+        self.last_scene_data: List[Dict] = []    # Store last scene for sync
 
-    async def connect(self, websocket: WebSocket) -> str:
+    async def connect(self, websocket: WebSocket, player_id: str = None) -> str:
         await websocket.accept()
-        player_id = str(uuid.uuid4())[:8]
-        self.players[player_id] = {"ws": websocket, "nickname": None, "ready": False}
+        
+        # 1. Try to restore existing player
+        if player_id and (player_id in self.players or player_id in self.inactive_players):
+            if player_id in self.inactive_players:
+                # Restore from inactive
+                self.players[player_id] = self.inactive_players.pop(player_id)
+                self.players[player_id]["ws"] = websocket
+                print(f"Player {player_id} reconnected (restored).")
+            elif player_id in self.players:
+                # Phantom connection or multiple tabs - update WS
+                # Close old WS if open? For now just overwrite.
+                try:
+                    await self.players[player_id]["ws"].close()
+                except:
+                    pass
+                self.players[player_id]["ws"] = websocket
+                print(f"Player {player_id} reconnected (active session).")
+        else:
+            # 2. New player
+            player_id = str(uuid.uuid4())[:8]
+            self.players[player_id] = {"ws": websocket, "nickname": None, "ready": False}
+            print(f"Player {player_id} connected (new).")
+
+        # Always send ID confirmation
         await websocket.send_text(json.dumps({"type": "assign_id", "player_id": player_id}))
-        print(f"Player {player_id} connected.")
         await self.broadcast_player_list()
         return player_id
 
-    async def disconnect(self, player_id: str):
-        self.players.pop(player_id, None)
-        print(f"Player {player_id} disconnected.")
+    async def disconnect(self, player_id: str, websocket: WebSocket):
+        if player_id in self.players:
+            # Race condition check: Only disconnect if this is the ACTIVE socket
+            if self.players[player_id]["ws"] != websocket:
+                print(f"Ignored disconnect for player {player_id} (socket mismatch - phantom disconnect).")
+                return
+
+            # Move to inactive instead of deleting
+            player_data = self.players.pop(player_id)
+            player_data["ws"] = None # Remove WS object
+            self.inactive_players[player_id] = player_data
+            print(f"Player {player_id} disconnected (moved to inactive).")
         await self.broadcast_player_list()
 
     async def set_nickname(self, player_id: str, nickname: str):
@@ -31,10 +63,16 @@ class ConnectionManager:
 
     def get_player_list(self) -> dict:
         """Get sanitized player list for broadcasting."""
-        return {
-            pid: {"nickname": info["nickname"], "ready": info["ready"]}
+        active = {
+            pid: {"nickname": info["nickname"], "ready": info["ready"], "status": "online"}
             for pid, info in self.players.items()
         }
+        inactive = {
+             pid: {"nickname": info["nickname"], "ready": info["ready"], "status": "offline"}
+             for pid, info in self.inactive_players.items()
+             if info["nickname"] # Only show if they had a name
+        }
+        return {**active, **inactive}
 
     async def broadcast_player_list(self):
         """Send updated player list to all connected clients."""
@@ -47,7 +85,10 @@ class ConnectionManager:
                 pass
 
     async def broadcast(self, sender_id: str, message: str):
-        sender_name = self.players[sender_id].get("nickname") or f"Detective-{sender_id[-3:]}"
+        sender_info = self.players.get(sender_id)
+        if not sender_info: return 
+        
+        sender_name = sender_info.get("nickname") or f"Detective-{sender_id[-3:]}"
         for pid, info in self.players.items():
             tag = "You" if pid == sender_id else sender_name
             await info["ws"].send_text(json.dumps({"type": "chat", "sender": tag, "text": message}))
@@ -60,11 +101,41 @@ class ConnectionManager:
                 pass
 
     async def broadcast_scene(self, scene: List[Dict]):
+        self.last_scene_data = scene # Store for sync
         for info in self.players.values():
             try:
                 await info["ws"].send_text(json.dumps({"type": "scene", "data": scene}))
             except:
                 pass
+
+    async def send_game_state(self, player_id: str):
+        """Send current game state to a specific player (late join/reconnect)."""
+        if player_id not in self.players:
+            return
+            
+        ws = self.players[player_id]["ws"]
+        try:
+            # 1. Send Game Started signal if needed
+            # (We don't strictly know if game started here, but this is usually called if it has)
+            # Fetch intro text to be safe
+            intro_text = "The case continues..." # Simplified for reconnect
+            
+            await ws.send_text(json.dumps({
+                "type": "game_started",
+                "case": "iris_bell", # TODO: Get from GameState if dynamic
+                "intro": None, # Don't replay intro text for reconnects usually, or maybe do?
+                "intro_audio_url": None
+            }))
+            
+            # 2. Send last scene
+            if self.last_scene_data:
+                 await ws.send_text(json.dumps({"type": "scene", "data": self.last_scene_data}))
+            
+            # 3. Send system message
+            await ws.send_text(json.dumps({"type": "system", "text": "Reconnected to ongoing investigation."}))
+                 
+        except Exception as e:
+            print(f"Error syncing player {player_id}: {e}")
 
     async def broadcast_game_start(self, case_id: str):
         """Notify all players that the game has started."""
