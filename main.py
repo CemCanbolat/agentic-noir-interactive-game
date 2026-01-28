@@ -46,9 +46,26 @@ async def websocket_endpoint(websocket: WebSocket, player_id: str = None):
             if payload["type"] == "nickname":
                 await manager.set_nickname(real_player_id, payload["nickname"])
             
+            # Handle ready toggle
+            elif payload["type"] == "toggle_ready":
+                if game_state.in_lobby:
+                    await manager.toggle_ready(real_player_id)
+            
             # Handle game start request
             elif payload["type"] == "start_game":
                 if game_state.in_lobby:
+                    # Check if all players are ready
+                    all_ready, ready_count, total = manager.check_all_ready()
+                    if not all_ready:
+                        await manager.broadcast_system(f"[WAIT] Not all detectives are ready! ({ready_count}/{total})")
+                        continue
+                    
+                    # Perform countdown
+                    for count in [3, 2, 1]:
+                        await manager.broadcast_countdown(count)
+                        await asyncio.sleep(1)
+                    
+                    # Start the game
                     case_id = payload.get("case", "iris_bell")
                     game_state.start_game(case_id)
                     await manager.broadcast_game_start(case_id)
@@ -81,6 +98,7 @@ async def websocket_endpoint(websocket: WebSocket, player_id: str = None):
                 
                 if player_action.lower() == "/lobby":
                     game_state.reset_to_lobby()
+                    await manager.reset_all_ready()
                     await manager.broadcast_system("[LOBBY] Returning to lobby...")
                     continue
                 

@@ -31,7 +31,7 @@ class ConnectionManager:
         else:
             # 2. New player
             player_id = str(uuid.uuid4())[:8]
-            self.players[player_id] = {"ws": websocket, "nickname": None, "ready": False}
+            self.players[player_id] = {"ws": websocket, "nickname": None, "ready": False, "has_nickname": False}
             print(f"Player {player_id} connected (new).")
 
         # Always send ID confirmation
@@ -56,10 +56,49 @@ class ConnectionManager:
     async def set_nickname(self, player_id: str, nickname: str):
         if player_id in self.players:
             self.players[player_id]["nickname"] = nickname
-            self.players[player_id]["ready"] = True
+            self.players[player_id]["has_nickname"] = True
+            # Don't auto-set ready anymore, player needs to click Ready button
             print(f"Player {player_id} set nickname: {nickname}")
             await self.broadcast_player_list()
             await self.broadcast_system(f"{nickname} joined the case.")
+
+    async def toggle_ready(self, player_id: str) -> bool:
+        """Toggle ready state for a player. Returns new ready state."""
+        if player_id in self.players and self.players[player_id]["nickname"]:
+            new_state = not self.players[player_id]["ready"]
+            self.players[player_id]["ready"] = new_state
+            nickname = self.players[player_id]["nickname"]
+            print(f"Player {player_id} ({nickname}) ready: {new_state}")
+            await self.broadcast_player_list()
+            return new_state
+        return False
+
+    def check_all_ready(self) -> tuple[bool, int, int]:
+        """Check if all players with nicknames are ready.
+        Returns (all_ready, ready_count, total_with_nicknames)"""
+        players_with_names = [p for p in self.players.values() if p.get("nickname")]
+        if not players_with_names:
+            return False, 0, 0
+        ready_count = sum(1 for p in players_with_names if p.get("ready"))
+        total = len(players_with_names)
+        return ready_count == total, ready_count, total
+
+    async def broadcast_countdown(self, count: int):
+        """Broadcast countdown message to all players."""
+        message = json.dumps({"type": "countdown", "count": count})
+        for info in self.players.values():
+            try:
+                await info["ws"].send_text(message)
+            except:
+                pass
+
+    async def reset_all_ready(self):
+        """Reset ready state for all players (e.g., when returning to lobby)."""
+        for player_id in self.players:
+            self.players[player_id]["ready"] = False
+        for player_id in self.inactive_players:
+            self.inactive_players[player_id]["ready"] = False
+        await self.broadcast_player_list()
 
     def get_player_list(self) -> dict:
         """Get sanitized player list for broadcasting."""
